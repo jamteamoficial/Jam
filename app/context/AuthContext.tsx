@@ -300,10 +300,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = () => {
+    // Limpiar likes del usuario al cerrar sesión (solo el estado de "me gusta", no el contador global)
+    if (user) {
+      const userId = user.email || user.username || 'default'
+      localStorage.removeItem(`likedPosts_${userId}`)
+    }
+    
     localStorage.removeItem('user')
     localStorage.removeItem('isAuthenticated')
     setUser(null)
     setIsAuthenticated(false)
+    
+    // Forzar recarga de la página para actualizar los likes
+    if (typeof window !== 'undefined') {
+      window.location.reload()
+    }
   }
 
   return (

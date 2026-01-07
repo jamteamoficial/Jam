@@ -18,18 +18,8 @@ export default function PostActions({ postId, usuario }: PostActionsProps) {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedLikes = localStorage.getItem('likedPosts')
-      const savedPostLikes = localStorage.getItem('postLikes')
-      
-      if (savedLikes) {
-        try {
-          const liked: string[] = JSON.parse(savedLikes)
-          setIsLiked(liked.includes(postId))
-        } catch (error) {
-          console.error('Error al cargar likes:', error)
-        }
-      }
-      
+      // Cargar contador global de likes (siempre visible)
+      const savedPostLikes = localStorage.getItem('postLikes_global')
       if (savedPostLikes) {
         try {
           const postLikes: { [key: string]: number } = JSON.parse(savedPostLikes)
@@ -38,8 +28,26 @@ export default function PostActions({ postId, usuario }: PostActionsProps) {
           console.error('Error al cargar contadores:', error)
         }
       }
+      
+      // Solo cargar estado de "me gusta" si hay usuario en sesión
+      if (user) {
+        const userId = user.email || user.username || 'default'
+        const savedLikes = localStorage.getItem(`likedPosts_${userId}`)
+        
+        if (savedLikes) {
+          try {
+            const liked: string[] = JSON.parse(savedLikes)
+            setIsLiked(liked.includes(postId))
+          } catch (error) {
+            console.error('Error al cargar likes:', error)
+          }
+        }
+      } else {
+        // Si no hay usuario, resetear estado de "me gusta"
+        setIsLiked(false)
+      }
     }
-  }, [postId])
+  }, [postId, user])
 
   const handleLike = () => {
     if (!user) {
@@ -51,6 +59,7 @@ export default function PostActions({ postId, usuario }: PostActionsProps) {
       return
     }
 
+    const userId = user.email || user.username || 'default'
     const newIsLiked = !isLiked
     const newLikeCount = newIsLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
     
@@ -59,11 +68,9 @@ export default function PostActions({ postId, usuario }: PostActionsProps) {
 
     // Guardar en localStorage
     if (typeof window !== 'undefined') {
-      const savedLikes = localStorage.getItem('likedPosts')
-      const savedPostLikes = localStorage.getItem('postLikes')
-      
+      // Guardar estado de "me gusta" del usuario
+      const savedLikes = localStorage.getItem(`likedPosts_${userId}`)
       let liked: string[] = []
-      let postLikes: { [key: string]: number } = {}
       
       if (savedLikes) {
         try {
@@ -72,25 +79,31 @@ export default function PostActions({ postId, usuario }: PostActionsProps) {
           console.error('Error al leer likes:', error)
         }
       }
+
+      if (newIsLiked) {
+        if (!liked.includes(postId)) {
+          liked.push(postId)
+        }
+      } else {
+        liked = liked.filter(id => id !== postId)
+      }
+      
+      localStorage.setItem(`likedPosts_${userId}`, JSON.stringify(liked))
+      
+      // Guardar contador global de likes (suma de todos los usuarios)
+      const savedPostLikes = localStorage.getItem('postLikes_global')
+      let postLikes: { [key: string]: number } = {}
       
       if (savedPostLikes) {
         try {
           postLikes = JSON.parse(savedPostLikes)
         } catch (error) {
-          console.error('Error al leer contadores:', error)
+          console.error('Error al leer contadores globales:', error)
         }
-      }
-
-      if (newIsLiked) {
-        liked.push(postId)
-      } else {
-        liked = liked.filter(id => id !== postId)
       }
       
       postLikes[postId] = newLikeCount
-      
-      localStorage.setItem('likedPosts', JSON.stringify(liked))
-      localStorage.setItem('postLikes', JSON.stringify(postLikes))
+      localStorage.setItem('postLikes_global', JSON.stringify(postLikes))
     }
   }
 
