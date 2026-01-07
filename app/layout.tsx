@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
+import HeaderWrapper from "./components/HeaderWrapper";
+import { Toaster } from "@/components/ui/toaster";
+import JamAnimation from "./components/JamAnimation";
 
 export const metadata: Metadata = {
   title: "App para Músicos",
@@ -16,7 +19,11 @@ export default function RootLayout({
     <html lang="es">
       <body>
         <AuthProvider>
-          {children}
+          <HeaderWrapper>
+            {children}
+          </HeaderWrapper>
+          <Toaster />
+          <JamAnimation />
         </AuthProvider>
       </body>
     </html>
