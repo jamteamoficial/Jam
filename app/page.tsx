@@ -17,7 +17,19 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'chats' | 'feed' | 'comunidad'>('feed')
   const [activeFeed, setActiveFeed] = useState<'general' | 'descubrir' | 'conectar' | 'aprender'>('general')
   const [currentPosts, setCurrentPosts] = useState<MockPost[]>(GENERAL_POSTS)
+  const [chatsPanelVisible, setChatsPanelVisible] = useState(true)
 
+  // Escuchar evento para toggle del panel de chats
+  useEffect(() => {
+    const handleToggleChatsPanel = () => {
+      setChatsPanelVisible(false)
+    }
+
+    window.addEventListener('toggleChatsPanel', handleToggleChatsPanel)
+    return () => {
+      window.removeEventListener('toggleChatsPanel', handleToggleChatsPanel)
+    }
+  }, [])
 
   // Actualizar posts cuando cambia el feed activo
   useEffect(() => {
@@ -160,42 +172,34 @@ export default function Home() {
       {/* Layout Desktop - 3 columnas */}
       <div className="hidden md:flex h-screen">
         {/* CHATS izquierda 25% */}
-        <div className="w-1/4 bg-white border-r-2 border-purple-200 overflow-y-auto">
-          <div className="p-4">
-            <h2 className="font-bold mb-4 text-xl bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">CHATS</h2>
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
-                    🎸
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Sembrador</h3>
-                      <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold">2</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="p-3 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
-                    🎸
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-900">Carlos Rock</h3>
-                      <span className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold">1</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+        {chatsPanelVisible && (
+          <div className="w-1/4 bg-white border-r-2 border-purple-200 overflow-y-auto relative">
+            <ChatsPanel />
           </div>
-        </div>
+        )}
 
-        {/* FEED centro 50% */}
-        <div className="w-1/2 overflow-y-auto bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex flex-col">
+        {/* Botón para mostrar chats cuando está oculto */}
+        {!chatsPanelVisible && (
+          <button
+            onClick={() => setChatsPanelVisible(true)}
+            className="fixed left-0 top-1/2 -translate-y-1/2 z-20 bg-purple-600 text-white p-2 rounded-r-lg hover:bg-purple-700 transition-colors shadow-lg"
+            aria-label="Mostrar chats"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+
+        {/* FEED centro - ajusta ancho según si el panel está visible */}
+        <div className={`overflow-y-auto bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex flex-col transition-all duration-300 ${chatsPanelVisible ? 'w-1/2' : 'w-1/3'}`}>
           {/* Barra de Tabs */}
           <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b-2 border-purple-200">
             <div className="flex">
@@ -287,8 +291,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* COMUNIDAD derecha 25% */}
-        <div className="w-1/4">
+        {/* COMUNIDAD derecha - ajusta ancho según si el panel está visible */}
+        <div className={chatsPanelVisible ? 'w-1/4' : 'w-2/3'}>
           <ComunidadPanel />
         </div>
       </div>
