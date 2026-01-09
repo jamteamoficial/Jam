@@ -1,8 +1,10 @@
 'use client'
 
-import { Users } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Users, Plus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import CreateComunidadModal from './CreateComunidadModal'
 
 interface Comunidad {
   id: string
@@ -113,59 +115,115 @@ const getColorClasses = (color: string) => {
 
 export default function ComunidadPanel() {
   const router = useRouter()
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [userComunidades, setUserComunidades] = useState<Comunidad[]>([])
+
+  // Cargar comunidades creadas por el usuario
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('userComunidades')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          setUserComunidades(parsed)
+        } catch (error) {
+          console.error('Error al cargar comunidades:', error)
+        }
+      }
+    }
+  }, [])
+
+  // Escuchar cuando se crea una nueva comunidad
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const saved = localStorage.getItem('userComunidades')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          setUserComunidades(parsed)
+        } catch (error) {
+          console.error('Error al cargar comunidades:', error)
+        }
+      }
+    }
+
+    window.addEventListener('storage', handleStorageChange)
+    // También escuchar eventos personalizados
+    window.addEventListener('comunidadCreated', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('comunidadCreated', handleStorageChange)
+    }
+  }, [])
 
   const handleComunidadClick = (comunidadId: string) => {
     router.push(`/comunidad/${comunidadId}`)
   }
 
-  return (
-    <div className="h-full bg-white border-l-2 border-purple-200 overflow-y-auto">
-      <div className="p-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Users className="w-5 h-5 text-purple-600" />
-          <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-            Comunidad
-          </h2>
-        </div>
+  // Combinar comunidades por defecto con las creadas por el usuario
+  const allComunidades = [...userComunidades, ...COMUNIDADES]
 
-        <div className="space-y-3">
-          {COMUNIDADES.map((comunidad) => (
-            <div
-              key={comunidad.id}
-              className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 hover:border-purple-300 transition-all hover:shadow-lg group"
+  return (
+    <>
+      <div className="h-full bg-white border-l-2 border-purple-200 overflow-y-auto">
+        <div className="p-4">
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-600" />
+              <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Comunidades
+              </h2>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="px-3 py-1.5 text-sm font-semibold rounded-lg bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white transition-all flex items-center gap-1.5"
             >
-              <div className="flex items-start gap-3 mb-2">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
-                  {comunidad.icono}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-gray-900 mb-1 truncate">{comunidad.nombre}</h3>
-                  <p className="text-xs text-gray-600 mb-2 line-clamp-2">{comunidad.descripcion}</p>
-                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <Users className="w-3 h-3" />
-                    <span>{comunidad.miembros} miembros</span>
+              <Plus className="w-4 h-4" />
+              Crear
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {allComunidades.map((comunidad) => (
+              <div
+                key={comunidad.id}
+                className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 hover:border-purple-300 transition-all hover:shadow-lg group"
+              >
+                <div className="flex items-start gap-3 mb-2">
+                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
+                    {comunidad.icono}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 mb-1 truncate">{comunidad.nombre}</h3>
+                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{comunidad.descripcion}</p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <Users className="w-3 h-3" />
+                      <span>{comunidad.miembros} miembros</span>
+                    </div>
                   </div>
                 </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={() => handleComunidadClick(comunidad.id)}
+                    className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                  >
+                    Ver Comunidad
+                  </button>
+                  <Link
+                    href={`/comunidad/${comunidad.id}/chat`}
+                    className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-center"
+                  >
+                    Chat
+                  </Link>
+                </div>
               </div>
-              <div className="flex gap-2 mt-2">
-                <button
-                  onClick={() => handleComunidadClick(comunidad.id)}
-                  className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
-                >
-                  Ver Comunidad
-                </button>
-                <Link
-                  href={`/comunidad/${comunidad.id}/chat`}
-                  className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-center"
-                >
-                  Chat
-                </Link>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+      <CreateComunidadModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+    </>
   )
 }
 

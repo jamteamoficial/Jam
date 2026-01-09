@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/app/context/AuthContext'
 import { useRouter } from 'next/navigation'
+import { uploadVideo } from '@/lib/hooks/useVideoUpload'
 
 interface CreateModalProps {
   isOpen: boolean
@@ -113,6 +114,37 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
     setLoading(true)
 
     try {
+      let videoUrl: string | null = null
+
+      // Si el contenido es video, subir a Supabase Storage
+      // Usar email como userId (o username si no hay email)
+      const userId = user.email || user.username || 'anonymous'
+      
+      if (contentType === 'video' && selectedVideo) {
+        try {
+          toast({
+            title: "Subiendo video...",
+            description: "Por favor espera mientras se sube tu video",
+          })
+          
+          videoUrl = await uploadVideo(selectedVideo, userId)
+          
+          toast({
+            title: "Video subido",
+            description: "El video se ha subido correctamente",
+          })
+        } catch (uploadError: any) {
+          console.error('Error al subir video:', uploadError)
+          toast({
+            title: "Error al subir video",
+            description: uploadError.message || "No se pudo subir el video a Supabase",
+            variant: "destructive"
+          })
+          setLoading(false)
+          return
+        }
+      }
+
       // Obtener publicaciones existentes de localStorage
       const existingPosts = JSON.parse(localStorage.getItem('userPosts') || '[]')
       
@@ -126,13 +158,12 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
         texto: contentType === 'mensaje' ? text : `Video: ${selectedVideo?.name || 'video'}`,
         avatar: '🎵',
         tipo: contentType === 'video' ? 'video' : 'compartir',
-        videoFile: contentType === 'video' ? {
-          name: selectedVideo?.name,
-          size: selectedVideo?.size,
-          type: selectedVideo?.type,
-          // En producción, aquí subirías el video a Supabase Storage
-          // Por ahora guardamos la referencia local
-          localUrl: videoPreview
+        videoFile: contentType === 'video' && selectedVideo ? {
+          name: selectedVideo.name,
+          size: selectedVideo.size,
+          type: selectedVideo.type,
+          videoUrl: videoUrl || null,
+          localUrl: videoPreview // Mantener preview local como fallback
         } : null,
         createdAt: new Date().toISOString()
       }
@@ -176,11 +207,11 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
       
       // Disparar evento para actualizar el feed
       window.dispatchEvent(new CustomEvent('newPostCreated'))
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al guardar publicación:', error)
       toast({
         title: "Error",
-        description: "No se pudo publicar",
+        description: error.message || "No se pudo publicar",
         variant: "destructive"
       })
       setLoading(false)

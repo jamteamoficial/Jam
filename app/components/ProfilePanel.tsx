@@ -31,7 +31,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
   // Cargar datos del perfil desde localStorage
   useEffect(() => {
     if (isAuthenticated && user && typeof window !== 'undefined') {
-      const savedProfile = localStorage.getItem(`profile_${user.id || user.email}`)
+      const savedProfile = localStorage.getItem(`profile_${user.email}`)
       if (savedProfile) {
         try {
           const parsed = JSON.parse(savedProfile)
