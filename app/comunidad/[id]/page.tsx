@@ -1,69 +1,181 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Users, Music } from 'lucide-react'
+import { ArrowLeft, Users, Music, Calendar, MessageCircle, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/app/context/AuthContext'
+import { useToast } from '@/hooks/use-toast'
 
-const mockComunidades: { [key: string]: { nombre: string; descripcion: string; icono: string; miembros: number; posts: any[] } } = {
+// Helper functions (se mueven antes de los datos)
+const getColorClasses = (color: string) => {
+  const colors: Record<string, string> = {
+    purple: 'from-purple-600 to-purple-700',
+    blue: 'from-blue-600 to-blue-700',
+    red: 'from-red-500 to-red-700',
+    green: 'from-green-500 to-green-600',
+    yellow: 'from-yellow-400 to-yellow-500',
+    orange: 'from-orange-500 to-orange-600',
+    indigo: 'from-indigo-600 to-indigo-700',
+    pink: 'from-pink-500 to-pink-600',
+    teal: 'from-teal-500 to-teal-600'
+  }
+  return colors[color] || 'from-purple-600 to-blue-600'
+}
+
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('es-CL', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  })
+}
+
+const formatNumber = (num: number) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+}
+
+interface ComunidadData {
+  nombre: string
+  descripcion: string
+  descripcionCompleta: string
+  icono: string
+  miembros: number
+  fechaCreacion: string
+  posts: any[]
+  color: string
+}
+
+const mockComunidades: { [key: string]: ComunidadData } = {
+  'audiciones': {
+    nombre: 'Audiciones',
+    descripcion: 'Encuentra audiciones y oportunidades para músicos',
+    descripcionCompleta: 'Comunidad dedicada a conectar músicos con oportunidades profesionales. Comparte audiciones, casting, búsquedas de músicos para proyectos, bandas que buscan miembros, y proyectos musicales que necesitan talento. Ideal para músicos de todos los niveles que buscan crecer en su carrera.',
+    icono: '🎤',
+    miembros: 1200,
+    fechaCreacion: '2023-01-15',
+    color: 'purple',
+    posts: [
+      { id: '1', usuario: 'Carlos Producer', texto: 'Busco vocalista para proyecto de pop rock en Santiago', avatar: '🎸', fecha: 'Hace 2 horas' },
+      { id: '2', usuario: 'Rock Band', texto: 'Necesitamos baterista urgente para concierto este viernes', avatar: '🥁', fecha: 'Hace 5 horas' }
+    ]
+  },
+  'clases': {
+    nombre: 'Aprender Música',
+    descripcion: 'Clases, tutoriales y aprendizaje musical',
+    descripcionCompleta: 'La mejor comunidad para aprender música desde cero o perfeccionar tus habilidades. Comparte tutoriales, técnicas, recursos educativos, partituras, y conecta con profesores. Perfecta para estudiantes y educadores musicales.',
+    icono: '🎓',
+    miembros: 2500,
+    fechaCreacion: '2022-11-20',
+    color: 'blue',
+    posts: [
+      { id: '1', usuario: 'Guitar Master', texto: 'Nueva lección sobre acordes de séptima disponible', avatar: '🎸', fecha: 'Hace 1 hora' },
+      { id: '2', usuario: 'Prof. María', texto: 'Clases disponibles para todos los niveles', avatar: '🎓', fecha: 'Hace 3 horas' }
+    ]
+  },
   'rock': {
-    nombre: 'Rock',
-    descripcion: 'Comunidad para amantes del rock. Comparte covers, busca bandas y conecta con otros rockeros.',
+    nombre: 'Rock & Bandas',
+    descripcion: 'Para bandas de rock y músicos del género',
+    descripcionCompleta: 'Comunidad para amantes del rock en todas sus variantes: rock clásico, alternativo, metal, punk, indie. Comparte covers, busca bandas, organiza jams, y conecta con otros rockeros apasionados. La comunidad más grande de rock en la plataforma.',
     icono: '🎸',
-    miembros: 1234,
+    miembros: 3100,
+    fechaCreacion: '2022-09-10',
+    color: 'red',
     posts: [
-      { id: '1', usuario: 'Carlos Rock', texto: 'Buscamos guitarrista para banda de rock alternativo', avatar: '🎸' },
-      { id: '2', usuario: 'Metal Head', texto: 'Nuevo cover de Metallica, disfruten!', avatar: '🎸' }
+      { id: '1', usuario: 'Carlos Rock', texto: 'Buscamos guitarrista para banda de rock alternativo', avatar: '🎸', fecha: 'Hace 2 horas' },
+      { id: '2', usuario: 'Metal Head', texto: 'Nuevo cover de Metallica, disfruten!', avatar: '🎸', fecha: 'Hace 4 horas' }
     ]
   },
-  'clases-guitarra': {
-    nombre: 'Clases de Guitarra',
-    descripcion: 'Aprende guitarra con profesores experimentados. Comparte técnicas y recursos.',
-    icono: '🎸',
-    miembros: 856,
+  'emergentes': {
+    nombre: 'Bandas Emergentes',
+    descripcion: 'Bandas nuevas buscando crecer y conectar',
+    descripcionCompleta: 'Espacio dedicado a bandas y artistas emergentes. Comparte tu música, busca consejos, colaboraciones, y conecta con otros músicos que están empezando. Ideal para bandas que buscan su primer concierto, grabación, o simplemente crecer juntos.',
+    icono: '🚀',
+    miembros: 1800,
+    fechaCreacion: '2023-03-05',
+    color: 'green',
     posts: [
-      { id: '1', usuario: 'Guitar Master', texto: 'Nueva lección sobre acordes de séptima', avatar: '🎸' },
-      { id: '2', usuario: 'Prof. Juan', texto: 'Clases disponibles para todos los niveles', avatar: '🎸' }
+      { id: '1', usuario: 'Nueva Banda', texto: 'Somos una banda nueva buscando nuestro primer concierto. ¿Consejos?', avatar: '🚀', fecha: 'Hace 1 hora' },
+      { id: '2', usuario: 'Emergentes', texto: 'Compartimos nuestro primer demo! Feedback bienvenido', avatar: '🎤', fecha: 'Hace 6 horas' }
     ]
   },
-  'leer-partituras': {
-    nombre: 'Aprende a Leer Partituras',
-    descripcion: 'Comunidad dedicada a enseñar lectura musical y teoría de partituras.',
-    icono: '📚',
-    miembros: 642,
+  'productores': {
+    nombre: 'Productores & Beats',
+    descripcion: 'Productores y creadores de beats',
+    descripcionCompleta: 'Comunidad exclusiva para productores, beatmakers, y creadores de música. Comparte beats, técnicas de producción, plugins, software, y colabora con otros productores. Perfecta para productores de todos los niveles.',
+    icono: '🎧',
+    miembros: 2200,
+    fechaCreacion: '2022-12-01',
+    color: 'yellow',
     posts: [
-      { id: '1', usuario: 'Music Theory', texto: 'Tutorial básico de lectura de partituras', avatar: '📚' },
-      { id: '2', usuario: 'Prof. Ana', texto: 'Ejercicios prácticos para principiantes', avatar: '📚' }
+      { id: '1', usuario: 'Beat Maker', texto: 'Acabo de terminar un nuevo beat, ¿quieren escucharlo?', avatar: '🎧', fecha: 'Hace 3 horas' },
+      { id: '2', usuario: 'Producer Pro', texto: 'Tutorial de producción en Ableton disponible', avatar: '🎛️', fecha: 'Hace 8 horas' }
+    ]
+  },
+  'jams': {
+    nombre: 'Jams & Sesiones',
+    descripcion: 'Jams en vivo y sesiones improvisadas',
+    descripcionCompleta: 'Organiza y participa en jam sessions, sesiones improvisadas, y encuentros musicales en vivo. Conecta con músicos para tocar juntos, organiza eventos, y disfruta de la música en su forma más espontánea y creativa.',
+    icono: '🥁',
+    miembros: 1500,
+    fechaCreacion: '2023-02-14',
+    color: 'orange',
+    posts: [
+      { id: '1', usuario: 'Jam Master', texto: 'Jam session este sábado en el centro, ¿quiénes se apuntan?', avatar: '🥁', fecha: 'Hace 5 horas' },
+      { id: '2', usuario: 'Guitar Jammer', texto: 'Sesión de improvisación libre este domingo', avatar: '🎸', fecha: 'Hace 10 horas' }
     ]
   },
   'jazz': {
-    nombre: 'Jazz',
-    descripcion: 'Para amantes del jazz. Comparte improvisaciones, busca músicos y disfruta del swing.',
+    nombre: 'Jazz & Blues',
+    descripcion: 'Comunidad de jazz, blues y música clásica',
+    descripcionCompleta: 'Para amantes del jazz, blues, y música clásica. Comparte improvisaciones, busca músicos para cuartetos, big bands, y proyectos de jazz. Ideal para saxofonistas, pianistas, contrabajistas, y todos los amantes de la música improvisada.',
     icono: '🎹',
-    miembros: 789,
+    miembros: 890,
+    fechaCreacion: '2022-10-25',
+    color: 'indigo',
     posts: [
-      { id: '1', usuario: 'Jazz Collective', texto: 'Jam session de jazz este viernes', avatar: '🎹' },
-      { id: '2', usuario: 'Sax Player', texto: 'Nueva improvisación de jazz moderno', avatar: '🎷' }
+      { id: '1', usuario: 'Jazz Collective', texto: 'Jam session de jazz este viernes', avatar: '🎹', fecha: 'Hace 2 horas' },
+      { id: '2', usuario: 'Sax Player', texto: 'Nueva improvisación de jazz moderno', avatar: '🎷', fecha: 'Hace 7 horas' }
     ]
   },
-  'house': {
-    nombre: 'House',
-    descripcion: 'Comunidad de música house. DJs, productores y amantes del house music.',
-    icono: '🎧',
-    miembros: 1123,
+  'electronica': {
+    nombre: 'Música Electrónica',
+    descripcion: 'DJs, productores y amantes de la electrónica',
+    descripcionCompleta: 'Comunidad de DJs, productores de música electrónica, y amantes del EDM, techno, house, trance, y más. Comparte mezclas, tracks originales, organiza eventos, y conecta con la escena electrónica.',
+    icono: '⚡',
+    miembros: 1900,
+    fechaCreacion: '2023-01-30',
+    color: 'pink',
     posts: [
-      { id: '1', usuario: 'DJ Luna', texto: 'Nueva mezcla de deep house, disfruten!', avatar: '🎧' },
-      { id: '2', usuario: 'House Producer', texto: 'Buscando colaboración para track de house', avatar: '🎧' }
+      { id: '1', usuario: 'DJ Techno', texto: 'Nueva pista de techno subida! Déjenme saber qué opinan', avatar: '⚡', fecha: 'Hace 4 horas' },
+      { id: '2', usuario: 'EDM Producer', texto: 'Buscando colaboración para track de progressive house', avatar: '🎧', fecha: 'Hace 12 horas' }
     ]
   },
-  'pop': {
-    nombre: 'Pop',
-    descripcion: 'Comunidad de música pop. Artistas, covers y las últimas tendencias pop.',
+  'folk': {
+    nombre: 'Folk & Acústico',
+    descripcion: 'Música acústica, folk y sonidos orgánicos',
+    descripcionCompleta: 'Espacio para músicos acústicos, cantautores, y amantes del folk. Comparte covers acústicos, composiciones originales, y conecta con otros músicos que valoran los sonidos orgánicos y la música tradicional.',
+    icono: '🎻',
+    miembros: 1100,
+    fechaCreacion: '2023-04-12',
+    color: 'teal',
+    posts: [
+      { id: '1', usuario: 'Acoustic Lover', texto: 'Compartí un nuevo cover acústico de Radiohead, disfruten!', avatar: '🎻', fecha: 'Hace 3 horas' },
+      { id: '2', usuario: 'Folk Artist', texto: 'Nueva canción original en el feed principal', avatar: '🎸', fecha: 'Hace 9 horas' }
+    ]
+  },
+  'hiphop': {
+    nombre: 'Hip-Hop & Rap',
+    descripcion: 'Rappers, MCs y productores de hip-hop',
+    descripcionCompleta: 'Comunidad de rappers, MCs, productores de hip-hop, beatmakers, y todos los amantes del rap. Comparte letras, beats, colaboraciones, y conecta con la cultura hip-hop. Perfecta para artistas urbanos.',
     icono: '🎤',
-    miembros: 945,
+    miembros: 2300,
+    fechaCreacion: '2022-08-18',
+    color: 'purple',
     posts: [
-      { id: '1', usuario: 'Pop Star', texto: 'Nuevo cover de Taylor Swift', avatar: '🎤' },
-      { id: '2', usuario: 'Pop Producer', texto: 'Buscando vocalista para proyecto pop', avatar: '🎤' }
+      { id: '1', usuario: 'Rapper MC', texto: '¿Alguien quiere hacer un featuring? Tengo un beat listo', avatar: '🎤', fecha: 'Hace 2 horas' },
+      { id: '2', usuario: 'Hip-Hop Artist', texto: 'Nueva freestyle en el canal, feedback apreciado!', avatar: '🎤', fecha: 'Hace 6 horas' }
     ]
   }
 }
@@ -71,77 +183,227 @@ const mockComunidades: { [key: string]: { nombre: string; descripcion: string; i
 export default function ComunidadPage() {
   const params = useParams()
   const router = useRouter()
+  const { user } = useAuth()
+  const { toast } = useToast()
   const comunidadId = params.id as string
   const comunidad = mockComunidades[comunidadId]
+  
+  const [isJoined, setIsJoined] = useState(false)
+  const [memberCount, setMemberCount] = useState(comunidad?.miembros || 0)
+
+  // Cargar estado de unirse desde localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && comunidadId) {
+      const joinedCommunities = JSON.parse(localStorage.getItem('joinedCommunities') || '[]')
+      setIsJoined(joinedCommunities.includes(comunidadId))
+      
+      // Cargar contador de miembros actualizado
+      const savedMemberCount = localStorage.getItem(`comunidad_${comunidadId}_members`)
+      if (savedMemberCount) {
+        setMemberCount(parseInt(savedMemberCount))
+      }
+    }
+  }, [comunidadId])
+
+  const handleJoin = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas iniciar sesión para unirte a una comunidad",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const joinedCommunities = JSON.parse(localStorage.getItem('joinedCommunities') || '[]')
+    const newIsJoined = !isJoined
+    
+    if (newIsJoined) {
+      // Unirse
+      if (!joinedCommunities.includes(comunidadId)) {
+        joinedCommunities.push(comunidadId)
+      }
+      setMemberCount(memberCount + 1)
+      localStorage.setItem(`comunidad_${comunidadId}_members`, (memberCount + 1).toString())
+      toast({
+        title: "¡Bienvenido!",
+        description: `Te has unido a ${comunidad?.nombre}`,
+      })
+    } else {
+      // Salir
+      const updated = joinedCommunities.filter((id: string) => id !== comunidadId)
+      localStorage.setItem('joinedCommunities', JSON.stringify(updated))
+      setMemberCount(Math.max(0, memberCount - 1))
+      localStorage.setItem(`comunidad_${comunidadId}_members`, Math.max(0, memberCount - 1).toString())
+      toast({
+        title: "Te has salido",
+        description: `Has salido de ${comunidad?.nombre}`,
+      })
+    }
+    
+    localStorage.setItem('joinedCommunities', JSON.stringify(joinedCommunities))
+    setIsJoined(newIsJoined)
+  }
+
+  const handleChatClick = () => {
+    if (!isJoined) {
+      toast({
+        title: "Únete primero",
+        description: "Debes unirte a la comunidad para acceder al chat",
+        variant: "destructive"
+      })
+      return
+    }
+    router.push(`/comunidad/${comunidadId}/chat`)
+  }
 
   if (!comunidad) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-600">Comunidad no encontrada</p>
+      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
+        <div className="text-center">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-4xl mb-4 mx-auto">
+            👥
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Comunidad no encontrada</h2>
+          <p className="text-gray-600 mb-4">La comunidad que buscas no existe</p>
+          <Button
+            onClick={() => router.push('/')}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+          >
+            Volver al inicio
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
-      {/* Header */}
-      <div className="bg-white border-b-2 border-purple-200 p-4">
-        <div className="flex items-center gap-4">
+      {/* Header con navegación */}
+      <div className="bg-white border-b-2 border-purple-200 p-4 sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto">
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-3xl">
-            {comunidad.icono}
-          </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              {comunidad.nombre}
-            </h1>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Users className="w-4 h-4" />
-              <span>{comunidad.miembros} miembros</span>
-            </div>
-          </div>
-          <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white">
-            Unirse
+            <span>Volver</span>
           </Button>
         </div>
       </div>
 
-      {/* Descripción */}
-      <div className="bg-white border-b-2 border-purple-200 p-6">
-        <p className="text-gray-700">{comunidad.descripcion}</p>
+      {/* Hero Section - Perfil de la Comunidad */}
+      <div className="bg-white border-b-2 border-purple-200">
+        <div className="max-w-7xl mx-auto p-6 md:p-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+            {/* Avatar grande */}
+            <div className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-6xl shadow-xl flex-shrink-0`}>
+              {comunidad.icono}
+            </div>
+            
+            {/* Información principal */}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">
+                {comunidad.nombre}
+              </h1>
+              
+              {/* Stats */}
+              <div className="flex flex-wrap items-center gap-6 mb-4">
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Users className="w-5 h-5 text-purple-600" />
+                  <span className="font-semibold text-lg">{formatNumber(memberCount)}</span>
+                  <span>miembros</span>
+                </div>
+                <div className="flex items-center gap-2 text-gray-600">
+                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <span>Creada el {formatDate(comunidad.fechaCreacion)}</span>
+                </div>
+              </div>
+
+              {/* Botones de acción */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                <Button
+                  onClick={handleJoin}
+                  disabled={!user}
+                  className={`${
+                    isJoined
+                      ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border-2 border-gray-300'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-2 border-transparent'
+                  } font-semibold px-6 py-3 text-lg transition-all`}
+                >
+                  {isJoined ? (
+                    <>
+                      <Check className="w-5 h-5 mr-2" />
+                      Unido
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-5 h-5 mr-2" />
+                      Unirse a la Comunidad
+                    </>
+                  )}
+                </Button>
+                
+                {isJoined && (
+                  <Button
+                    onClick={handleChatClick}
+                    className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold px-6 py-3 text-lg border-2 border-transparent transition-all"
+                  >
+                    <MessageCircle className="w-5 h-5 mr-2" />
+                    Chat Comunitario
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Descripción Completa */}
+      <div className="bg-white border-b-2 border-purple-200">
+        <div className="max-w-7xl mx-auto p-6 md:p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Sobre esta comunidad</h2>
+          <p className="text-gray-700 text-lg leading-relaxed max-w-4xl">
+            {comunidad.descripcionCompleta}
+          </p>
+        </div>
       </div>
 
       {/* Posts de la comunidad */}
-      <div className="max-w-4xl mx-auto p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <Music className="w-5 h-5 text-purple-600" />
-          Publicaciones
-        </h2>
-        <div className="space-y-4">
-          {comunidad.posts.map((post) => (
-            <div
-              key={post.id}
-              className="bg-white rounded-xl p-6 border-2 border-purple-200 hover:border-purple-300 transition-all hover:shadow-lg"
-            >
-              <div className="flex items-center gap-4 mb-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
-                  {post.avatar}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-900">{post.usuario}</h3>
-                  <p className="text-sm text-gray-500">Hace 2 horas</p>
-                </div>
-              </div>
-              <p className="text-gray-700">{post.texto}</p>
-            </div>
-          ))}
+      <div className="max-w-7xl mx-auto p-6 md:p-8">
+        <div className="flex items-center gap-3 mb-6">
+          <Music className="w-6 h-6 text-purple-600" />
+          <h2 className="text-2xl font-bold text-gray-900">Publicaciones Recientes</h2>
         </div>
+        
+        {comunidad.posts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {comunidad.posts.map((post) => (
+              <div
+                key={post.id}
+                className="bg-white rounded-xl p-6 border-2 border-purple-200 hover:border-purple-300 transition-all hover:shadow-lg"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl flex-shrink-0">
+                    {post.avatar}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-gray-900 truncate">{post.usuario}</h3>
+                    <p className="text-sm text-gray-500">{post.fecha || 'Hace 2 horas'}</p>
+                  </div>
+                </div>
+                <p className="text-gray-700 leading-relaxed">{post.texto}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl p-12 text-center border-2 border-purple-200">
+            <Music className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600 text-lg">Aún no hay publicaciones en esta comunidad</p>
+            <p className="text-gray-500 mt-2">¡Sé el primero en compartir algo!</p>
+          </div>
+        )}
       </div>
     </div>
   )

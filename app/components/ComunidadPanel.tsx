@@ -132,10 +132,9 @@ export default function ComunidadPanel() {
           {COMUNIDADES.map((comunidad) => (
             <div
               key={comunidad.id}
-              onClick={() => handleComunidadClick(comunidad.id)}
-              className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 hover:border-purple-300 cursor-pointer transition-all hover:shadow-lg group"
+              className="p-4 rounded-xl bg-gradient-to-br from-purple-50 to-blue-50 border-2 border-purple-200 hover:border-purple-300 transition-all hover:shadow-lg group"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-start gap-3 mb-2">
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
                   {comunidad.icono}
                 </div>
@@ -147,6 +146,20 @@ export default function ComunidadPanel() {
                     <span>{comunidad.miembros} miembros</span>
                   </div>
                 </div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => handleComunidadClick(comunidad.id)}
+                  className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+                >
+                  Ver Comunidad
+                </button>
+                <Link
+                  href={`/comunidad/${comunidad.id}/chat`}
+                  className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors text-center"
+                >
+                  Chat
+                </Link>
               </div>
             </div>
           ))}

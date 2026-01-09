@@ -16,6 +16,58 @@ interface Chat {
   mensajesNoLeidos: number
 }
 
+// Chats de ejemplo para probar
+const mockChats: Chat[] = [
+  {
+    id: 'mock-1',
+    usuario: 'Sembrador',
+    avatar: '🎸',
+    ultimoMensaje: 'Hola! ¿Tocamos juntos?',
+    timestamp: '10:30',
+    mensajesNoLeidos: 2
+  },
+  {
+    id: 'mock-2',
+    usuario: 'Carlos Rock',
+    avatar: '🥁',
+    ultimoMensaje: 'Perfecto, nos vemos mañana',
+    timestamp: '09:15',
+    mensajesNoLeidos: 1
+  },
+  {
+    id: 'mock-3',
+    usuario: 'Mariana Luna',
+    avatar: '🎤',
+    ultimoMensaje: '¿Hacemos una sesión de grabación?',
+    timestamp: 'Ayer',
+    mensajesNoLeidos: 0
+  },
+  {
+    id: 'mock-4',
+    usuario: 'Juan Pérez',
+    avatar: '🎹',
+    ultimoMensaje: 'El ensayo fue increíble, gracias!',
+    timestamp: 'Ayer',
+    mensajesNoLeidos: 3
+  },
+  {
+    id: 'mock-5',
+    usuario: 'Ana Jazz',
+    avatar: '🎺',
+    ultimoMensaje: '¿Tocamos jazz este fin de semana?',
+    timestamp: '11:45',
+    mensajesNoLeidos: 0
+  },
+  {
+    id: 'mock-6',
+    usuario: 'Pedro DJ',
+    avatar: '🎧',
+    ultimoMensaje: 'Voy a subir la nueva mezcla',
+    timestamp: '08:20',
+    mensajesNoLeidos: 1
+  }
+]
+
 export default function ChatsPanel() {
   const { user } = useAuth()
   const [chats, setChats] = useState<Chat[]>([])
@@ -172,12 +224,9 @@ export default function ChatsPanel() {
           <div className="text-center py-8">
             <p className="text-gray-500">Cargando chats…</p>
           </div>
-        ) : chats.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">Aún no tienes chats</p>
-          </div>
         ) : (
           <div className="space-y-2">
+            {/* Mostrar chats reales si existen */}
             {chats.map((chat) => (
               <Link
                 key={chat.id}
@@ -201,6 +250,34 @@ export default function ChatsPanel() {
                       {chat.timestamp && (
                         <span className="text-xs text-gray-500">{chat.timestamp}</span>
                       )}
+                    </div>
+                    <p className="text-sm text-gray-600 truncate">{chat.ultimoMensaje}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+            {/* Mostrar chats de ejemplo para probar */}
+            {mockChats.map((chat) => (
+              <Link
+                key={chat.id}
+                href={`/chat/${chat.id}`}
+                className="block p-3 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors border-2 border-transparent hover:border-purple-200 active:scale-95"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
+                      {chat.avatar}
+                    </div>
+                    {chat.mensajesNoLeidos > 0 && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-xs text-white font-bold">
+                        {chat.mensajesNoLeidos}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-semibold text-gray-900 truncate">{chat.usuario}</h3>
+                      <span className="text-xs text-gray-500">{chat.timestamp}</span>
                     </div>
                     <p className="text-sm text-gray-600 truncate">{chat.ultimoMensaje}</p>
                   </div>

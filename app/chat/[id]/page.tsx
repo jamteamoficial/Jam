@@ -22,6 +22,88 @@ interface ConversationData {
   otherUserId: string
 }
 
+// Datos de ejemplo para chats mock
+const mockChatsData: { [key: string]: { usuario: string; avatar: string; initialMessages: any[] } } = {
+  'mock-1': {
+    usuario: 'Sembrador',
+    avatar: '🎸',
+    initialMessages: [
+      {
+        id: '1',
+        content: 'Hola! ¿Tocamos juntos?',
+        sender_id: 'other',
+        created_at: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: '2',
+        content: 'Me encantaría! ¿Qué instrumento tocas?',
+        sender_id: 'user',
+        created_at: new Date(Date.now() - 3300000).toISOString()
+      }
+    ]
+  },
+  'mock-2': {
+    usuario: 'Carlos Rock',
+    avatar: '🥁',
+    initialMessages: [
+      {
+        id: '1',
+        content: 'Perfecto, nos vemos mañana',
+        sender_id: 'other',
+        created_at: new Date(Date.now() - 7200000).toISOString()
+      }
+    ]
+  },
+  'mock-3': {
+    usuario: 'Mariana Luna',
+    avatar: '🎤',
+    initialMessages: [
+      {
+        id: '1',
+        content: '¿Hacemos una sesión de grabación?',
+        sender_id: 'other',
+        created_at: new Date(Date.now() - 86400000).toISOString()
+      }
+    ]
+  },
+  'mock-4': {
+    usuario: 'Juan Pérez',
+    avatar: '🎹',
+    initialMessages: [
+      {
+        id: '1',
+        content: 'El ensayo fue increíble, gracias!',
+        sender_id: 'other',
+        created_at: new Date(Date.now() - 86400000).toISOString()
+      }
+    ]
+  },
+  'mock-5': {
+    usuario: 'Ana Jazz',
+    avatar: '🎺',
+    initialMessages: [
+      {
+        id: '1',
+        content: '¿Tocamos jazz este fin de semana?',
+        sender_id: 'other',
+        created_at: new Date(Date.now() - 1800000).toISOString()
+      }
+    ]
+  },
+  'mock-6': {
+    usuario: 'Pedro DJ',
+    avatar: '🎧',
+    initialMessages: [
+      {
+        id: '1',
+        content: 'Voy a subir la nueva mezcla',
+        sender_id: 'other',
+        created_at: new Date(Date.now() - 5400000).toISOString()
+      }
+    ]
+  }
+}
+
 export default function ChatPage() {
   const params = useParams()
   const router = useRouter()
@@ -52,7 +134,7 @@ export default function ChatPage() {
     getUserId()
   }, [])
 
-  // 1) Validar que la conversación exista en Supabase
+  // 1) Validar que la conversación exista en Supabase o sea un chat mock
   useEffect(() => {
     if (!conversationId) return
 
@@ -60,6 +142,43 @@ export default function ChatPage() {
       setLoading(true)
       setErrorMsg(null)
 
+      // Si es un chat mock, cargar datos de ejemplo
+      if (conversationId.startsWith('mock-')) {
+        const mockData = mockChatsData[conversationId]
+        if (mockData) {
+          setExists(true)
+          setChatData({
+            usuario: mockData.usuario,
+            avatar: mockData.avatar,
+            otherUserId: 'mock-user'
+          })
+          
+          // Cargar mensajes desde localStorage o usar iniciales
+          if (typeof window !== 'undefined') {
+            const savedMessages = localStorage.getItem(`chat_${conversationId}`)
+            if (savedMessages) {
+              try {
+                const parsed = JSON.parse(savedMessages)
+                setMessages(parsed)
+              } catch (error) {
+                console.error('Error al cargar mensajes:', error)
+                setMessages(mockData.initialMessages)
+              }
+            } else {
+              setMessages(mockData.initialMessages)
+            }
+          }
+          
+          setLoading(false)
+          return
+        } else {
+          setExists(false)
+          setLoading(false)
+          return
+        }
+      }
+
+      // Si no es mock, buscar en Supabase
       console.log("Consultando conversations con id:", conversationId)
 
       const { data, error } = await supabase
@@ -97,9 +216,9 @@ export default function ChatPage() {
     checkConversation()
   }, [conversationId])
 
-  // 2) Cargar mensajes al abrir el chat
+  // 2) Cargar mensajes al abrir el chat (solo para chats reales de Supabase)
   useEffect(() => {
-    if (!conversationId || exists !== true) return
+    if (!conversationId || exists !== true || conversationId.startsWith('mock-')) return
 
     const loadMessages = async () => {
       const { data, error } = await supabase
@@ -160,9 +279,9 @@ export default function ChatPage() {
     loadMessages()
   }, [conversationId, exists])
 
-  // 3) Realtime – recibir mensajes nuevos
+  // 3) Realtime – recibir mensajes nuevos (solo para chats reales)
   useEffect(() => {
-    if (!conversationId || exists !== true) return
+    if (!conversationId || exists !== true || conversationId.startsWith('mock-')) return
 
     const channel = supabase
       .channel(`messages-${conversationId}`)
@@ -190,6 +309,13 @@ export default function ChatPage() {
     }
   }, [conversationId, exists])
 
+  // Guardar mensajes de chats mock en localStorage
+  useEffect(() => {
+    if (conversationId?.startsWith('mock-') && messages.length > 0 && typeof window !== 'undefined') {
+      localStorage.setItem(`chat_${conversationId}`, JSON.stringify(messages))
+    }
+  }, [messages, conversationId])
+
   // Scroll automático al agregar mensajes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -200,6 +326,27 @@ export default function ChatPage() {
     const content = text.trim()
     if (!content || !conversationId) return
 
+    // Si es un chat mock, guardar en localStorage
+    if (conversationId.startsWith('mock-')) {
+      const newMessage = {
+        id: Date.now().toString(),
+        content,
+        sender_id: 'user',
+        created_at: new Date().toISOString()
+      }
+      
+      setMessages((prev) => [...prev, newMessage])
+      setText('')
+      
+      // Focus en el input después de enviar
+      setTimeout(() => {
+        const input = document.querySelector('input[type="text"]') as HTMLInputElement
+        input?.focus()
+      }, 100)
+      return
+    }
+
+    // Si no es mock, enviar a Supabase
     // Obtener el ID del usuario desde Supabase Auth
     const { data: { user: supabaseUser } } = await supabase.auth.getUser()
     const senderId = supabaseUser?.id ?? 'demo-user'
@@ -288,7 +435,10 @@ export default function ChatPage() {
         ) : (
           messages.map((message) => {
             // Determinar si el mensaje es del usuario actual
-            const isUser = message.sender_id === currentUserId
+            // Para chats mock, usar 'user' como identificador
+            const isUser = conversationId?.startsWith('mock-') 
+              ? message.sender_id === 'user'
+              : message.sender_id === currentUserId
             
             return (
               <div
