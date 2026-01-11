@@ -4,8 +4,7 @@ export async function uploadVideo(file: File, userId: string) {
   if (typeof window === 'undefined') return '';
 
   // Usar el cliente centralizado de Supabase
-  const { getSupabaseClient } = await import('@/src/supabaseClient');
-  const supabase = getSupabaseClient();
+  const { supabase } = await import('@/lib/supabase');
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;

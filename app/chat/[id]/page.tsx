@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
-import { supabase } from '@/src/supabaseClient'
+import { supabase } from '@/lib/supabase'
 
 interface Message {
   id: string
