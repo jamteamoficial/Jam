@@ -273,6 +273,21 @@ export default function Home() {
                 </div>
                 <p className="mt-2 text-gray-600 mb-4">{post.texto}</p>
                 
+                {/* Mostrar video si existe */}
+                {(post as any).videoFile?.videoUrl && (
+                  <div className="mb-4 rounded-xl overflow-hidden">
+                    <video
+                      src={(post as any).videoFile.videoUrl}
+                      controls
+                      playsInline
+                      preload="metadata"
+                      className="w-full max-h-96 rounded-xl"
+                    >
+                      Tu navegador no soporta la reproducción de video.
+                    </video>
+                  </div>
+                )}
+                
                 {/* Botones de interacción */}
                 <div className="mb-4">
                   <PostActions postId={post.id} usuario={post.usuario} />
@@ -339,6 +354,21 @@ export default function Home() {
                         {post.texto}
                       </p>
                     </div>
+
+                    {/* Mostrar video si existe (móvil) */}
+                    {(post as any).videoFile?.videoUrl && (
+                      <div className="mb-4 rounded-xl overflow-hidden">
+                        <video
+                          src={(post as any).videoFile.videoUrl}
+                          controls
+                          playsInline
+                          preload="metadata"
+                          className="w-full max-h-96 rounded-xl"
+                        >
+                          Tu navegador no soporta la reproducción de video.
+                        </video>
+                      </div>
+                    )}
 
                     {/* Botones de interacción */}
                     <div className="mb-4">

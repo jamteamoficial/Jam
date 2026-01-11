@@ -11,7 +11,9 @@ export async function uploadVideo(file: File, userId: string) {
   // Usamos el nombre exacto que vimos en tu panel de Supabase
   const { data, error } = await supabase.storage
     .from('Videos JAM') 
-    .upload(`${userId}/${fileName}`, file);
+    .upload(`${userId}/${fileName}`, file, {
+      contentType: file.type
+    });
     
   if (error) {
     console.error('Error en Supabase:', error.message);
