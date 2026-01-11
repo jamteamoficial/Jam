@@ -3,18 +3,9 @@
 export async function uploadVideo(file: File, userId: string) {
   if (typeof window === 'undefined') return '';
 
-  const { createClient } = await import('@supabase/supabase-js');
-  
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
-    );
-  }
-  
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  // Usar el cliente centralizado de Supabase
+  const { getSupabaseClient } = await import('@/src/supabaseClient');
+  const supabase = getSupabaseClient();
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
