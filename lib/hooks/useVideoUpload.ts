@@ -5,10 +5,16 @@ export async function uploadVideo(file: File, userId: string) {
 
   const { createClient } = await import('@supabase/supabase-js');
   
-  const supabase = createClient(
-    'https://jamteamoficial.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhdGZjdG9kY2RzbHdjeWplbWltIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3MzMxOTYsImV4cCI6MjA4MzMwOTE5Nn0.kzTBVxhr5Y1bYN6gTUFU2eAhvw2VsYK0to-hoetOQfg'
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase environment variables. Please configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+    );
+  }
+  
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
   const fileExt = file.name.split('.').pop();
   const fileName = `${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
