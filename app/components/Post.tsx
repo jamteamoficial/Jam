@@ -14,9 +14,10 @@ interface PostProps {
   commentPreview?: string
   commenter?: string
   postId?: string
+  videoUrl?: string
 }
 
-export default function Post({ name, username, avatar, content, likes: initialLikes, comments, commentPreview, commenter, postId }: PostProps) {
+export default function Post({ name, username, avatar, content, likes: initialLikes, comments, commentPreview, commenter, postId, videoUrl }: PostProps) {
   const { user, isFollowing, followUser, unfollowUser } = useAuth()
   const [likes, setLikes] = useState(initialLikes)
   const [liked, setLiked] = useState(false)
@@ -120,6 +121,22 @@ export default function Post({ name, username, avatar, content, likes: initialLi
         )}
       </div>
       <p className="text-lg mb-6">{content}</p>
+      
+      {/* Mostrar video si existe */}
+      {videoUrl && (
+        <div className="mb-6 rounded-xl overflow-hidden">
+          <video
+            src={videoUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="w-full rounded-xl bg-black max-h-[500px]"
+          >
+            Tu navegador no soporta la reproducción de video.
+          </video>
+        </div>
+      )}
+      
       <div className="flex space-x-6 text-gray-500 mb-4">
         <button 
           onClick={handleLike}

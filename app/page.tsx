@@ -271,13 +271,15 @@ export default function Home() {
                     <p className="text-purple-600 font-semibold">{post.instrumento}</p>
                   </div>
                 </div>
-                <p className="mt-2 text-gray-600 mb-4">{post.texto}</p>
+                {post.texto && (
+                  <p className="mt-2 text-gray-600 mb-4">{post.texto}</p>
+                )}
                 
                 {/* Mostrar video si existe */}
-                {(post as any).videoFile?.videoUrl && (
+                {(post as any).video_url && (
                   <div className="mb-4 rounded-xl overflow-hidden w-full">
                     <video
-                      src={(post as any).videoFile.videoUrl}
+                      src={(post as any).video_url}
                       controls
                       muted
                       playsInline
@@ -350,17 +352,19 @@ export default function Home() {
                         </p>
                       </div>
                     </div>
-                    <div className="mb-4">
-                      <p className="text-gray-700 leading-relaxed line-clamp-3">
-                        {post.texto}
-                      </p>
-                    </div>
+                    {post.texto && (
+                      <div className="mb-4">
+                        <p className="text-gray-700 leading-relaxed line-clamp-3">
+                          {post.texto}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Mostrar video si existe (móvil) */}
-                    {(post as any).videoFile?.videoUrl && (
+                    {(post as any).video_url && (
                       <div className="mb-4 rounded-xl overflow-hidden w-full">
                         <video
-                          src={(post as any).videoFile.videoUrl}
+                          src={(post as any).video_url}
                           controls
                           muted
                           playsInline

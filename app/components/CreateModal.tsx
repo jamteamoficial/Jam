@@ -155,16 +155,10 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
         instrumento: 'Músico',
         estilo: 'Varios',
         ciudad: 'Santiago',
-        texto: contentType === 'mensaje' ? text : `Video: ${selectedVideo?.name || 'video'}`,
+        texto: contentType === 'mensaje' ? text : '',
         avatar: '🎵',
         tipo: contentType === 'video' ? 'video' : 'compartir',
-        videoFile: contentType === 'video' && selectedVideo ? {
-          name: selectedVideo.name,
-          size: selectedVideo.size,
-          type: selectedVideo.type,
-          videoUrl: videoUrl || null,
-          localUrl: videoPreview // Mantener preview local como fallback
-        } : null,
+        video_url: contentType === 'video' ? (videoUrl || null) : null,
         createdAt: new Date().toISOString()
       }
 
