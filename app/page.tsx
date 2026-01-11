@@ -275,13 +275,14 @@ export default function Home() {
                 
                 {/* Mostrar video si existe */}
                 {(post as any).videoFile?.videoUrl && (
-                  <div className="mb-4 rounded-xl overflow-hidden">
+                  <div className="mb-4 rounded-xl overflow-hidden w-full">
                     <video
                       src={(post as any).videoFile.videoUrl}
                       controls
+                      muted
                       playsInline
                       preload="metadata"
-                      className="w-full max-h-96 rounded-xl"
+                      className="w-full rounded-xl"
                     >
                       Tu navegador no soporta la reproducción de video.
                     </video>
@@ -357,13 +358,14 @@ export default function Home() {
 
                     {/* Mostrar video si existe (móvil) */}
                     {(post as any).videoFile?.videoUrl && (
-                      <div className="mb-4 rounded-xl overflow-hidden">
+                      <div className="mb-4 rounded-xl overflow-hidden w-full">
                         <video
                           src={(post as any).videoFile.videoUrl}
                           controls
+                          muted
                           playsInline
                           preload="metadata"
-                          className="w-full max-h-96 rounded-xl"
+                          className="w-full rounded-xl"
                         >
                           Tu navegador no soporta la reproducción de video.
                         </video>
