@@ -128,6 +128,7 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
           })
           
           videoUrl = await uploadVideo(selectedVideo, userId)
+          console.log('URL recibida:', videoUrl)
           
           toast({
             title: "Video subido",
@@ -161,6 +162,7 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
         video_url: contentType === 'video' ? (videoUrl || null) : null,
         createdAt: new Date().toISOString()
       }
+      console.log('Objeto postData a guardar:', postData)
 
       // Siempre crear publicación en General
       const generalPost = {

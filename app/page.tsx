@@ -255,7 +255,9 @@ export default function Home() {
               <p className="text-gray-600 mb-6">Sé el primero en compartir</p>
             </div>
           ) : (
-            currentPosts.map((post, index) => (
+            currentPosts.map((post, index) => {
+              console.log('Post renderizado:', post)
+              return (
               <div
                 key={post.id}
                 className="bg-white border-2 border-purple-200 rounded-xl p-6 hover:shadow-lg transition-all"
@@ -304,7 +306,8 @@ export default function Home() {
                   JAM
                 </Button>
               </div>
-            ))
+              )
+            })
           )}
           </div>
         </div>
