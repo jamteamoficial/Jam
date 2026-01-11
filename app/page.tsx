@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from './context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import { Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -379,3 +379,4 @@ export default function Home() {
     </div>
   )
 }
+// forzando rebuild vercel

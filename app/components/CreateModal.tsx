@@ -3,10 +3,10 @@
 import { useState, useRef } from 'react'
 import { X, Music, Video, Type, Upload, FileVideo } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import { useAuth } from '@/app/context/AuthContext'
 import { useRouter } from 'next/navigation'
-import { uploadVideo } from '@/lib/hooks/useVideoUpload'
+import { uploadVideo } from '@/src/lib/hooks/useVideoUpload'
 
 interface CreateModalProps {
   isOpen: boolean

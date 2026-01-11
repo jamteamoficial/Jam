@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { MessageCircle, X } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/src/lib/supabase'
 import { getLocalUserId } from '@/src/lib/localUser'
 
 interface Chat {

@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/src/lib/supabase';
 
 export async function uploadVideo(file: File, userId: string) {
   if (typeof window === 'undefined') return '';
@@ -24,3 +24,4 @@ export async function uploadVideo(file: File, userId: string) {
     
   return publicUrl;
 }
+

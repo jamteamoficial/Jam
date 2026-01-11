@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/app/context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import { Music, MessageCircle, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import FeedTabs from '@/app/components/FeedTabs'

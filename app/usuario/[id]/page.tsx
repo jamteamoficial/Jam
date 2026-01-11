@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Heart, Users, Music, MapPin, Mail, Instagram } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import PostActions from '@/app/components/PostActions'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from '@/app/data/mockPosts'
 

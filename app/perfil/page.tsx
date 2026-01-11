@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save } from 'lucide-react'

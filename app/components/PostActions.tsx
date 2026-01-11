@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Heart, MessageCircle } from 'lucide-react'
 import { useAuth } from '@/app/context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 
 interface PostActionsProps {
   postId: string

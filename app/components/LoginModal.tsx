@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { X, Mail, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 

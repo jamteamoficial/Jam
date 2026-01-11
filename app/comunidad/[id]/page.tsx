@@ -5,7 +5,7 @@ import { ArrowLeft, Users, Music, Calendar, MessageCircle, Check } from 'lucide-
 import { Button } from '@/components/ui/button'
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/app/context/AuthContext'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 
 // Helper functions (se mueven antes de los datos)
 const getColorClasses = (color: string) => {

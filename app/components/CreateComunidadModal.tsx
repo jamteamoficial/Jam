@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { X, Users, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useToast } from '@/hooks/use-toast'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import { useAuth } from '@/app/context/AuthContext'
 
 interface CreateComunidadModalProps {
