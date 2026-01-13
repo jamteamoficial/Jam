@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 import { Music, User, LogIn, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import GoogleLogin from '../../components/GoogleLogin'
 
 interface HeaderProps {
   onProfileClick?: () => void
@@ -54,6 +55,11 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
 
           {/* Navegación derecha */}
           <div className="flex items-center gap-3">
+            {/* Botón Google Login */}
+            <div className="scale-75 origin-center">
+              <GoogleLogin />
+            </div>
+            
             {/* Botón Perfil - Si hay sesión muestra perfil, si no obliga a iniciar sesión */}
             <Button
               variant="ghost"
