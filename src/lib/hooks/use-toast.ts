@@ -1,28 +1,35 @@
-'use client'
+import { useState, useEffect } from 'react'
 
-import { useCallback } from 'react'
-
-export interface Toast {
+type ToastProps = {
   title: string
   description?: string
   variant?: 'default' | 'destructive'
-  duration?: number
 }
 
-let toastState: Toast | null = null
-let toastListeners: Array<(toast: Toast | null) => void> = []
+let listeners: Array<(toast: ToastProps | null) => void> = []
+let memoryToast: ToastProps | null = null
+
+function dispatch(toast: ToastProps | null) {
+  memoryToast = toast
+  listeners.forEach((listener) => listener(toast))
+}
+
+export function toast(props: ToastProps) {
+  dispatch(props)
+  setTimeout(() => {
+    dispatch(null)
+  }, 3000)
+}
 
 export function useToast() {
-  const toast = useCallback((newToast: Toast) => {
-    toastState = newToast
-    toastListeners.forEach((listener) => listener(newToast))
+  const [currentToast, setCurrentToast] = useState<ToastProps | null>(memoryToast)
 
-    const duration = newToast.duration || 3000
-    setTimeout(() => {
-      toastState = null
-      toastListeners.forEach((listener) => listener(null))
-    }, duration)
+  useEffect(() => {
+    listeners.push(setCurrentToast)
+    return () => {
+      listeners = listeners.filter((l) => l !== setCurrentToast)
+    }
   }, [])
 
-  return { toast }
+  return { currentToast, toast }
 }
