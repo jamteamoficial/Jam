@@ -1,31 +1,55 @@
 'use client'
 
-import { supabase } from '../src/lib/supabase'
+import { useState } from 'react'
+import { createClient } from '@/src/lib/supabase/client'
 
 export default function GoogleLogin() {
-  const handleLogin = () => {
+  const [loading, setLoading] = useState(false)
+  const supabase = createClient()
+
+  const handleLogin = async () => {
     if (typeof window === 'undefined') return
-    
-    supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+
+    setLoading(true)
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback`
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+        },
+      })
+
+      if (error) {
+        console.error('Error al iniciar sesión con Google:', error)
+        setLoading(false)
+        return
+      }
+
+      if (data?.url) {
+        window.location.href = data.url
+        return
+      }
+    } catch (e) {
+      console.error('Error en login con Google:', e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
     <button
+      type="button"
       onClick={handleLogin}
-      className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all"
+      disabled={loading}
+      className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
     >
-      {/* Icono de Google oficial */}
       <img 
         src="https://www.svgrepo.com/show/475656/google-color.svg" 
         alt="Google logo" 
         className="w-4 h-4"
       />
-      <span className="hidden sm:inline">Google</span>
+      <span className="hidden sm:inline">{loading ? 'Cargando…' : 'Google'}</span>
     </button>
   )
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { supabase } from '@/src/lib/supabase';
+import { supabase } from '@/src/lib/supabase/client';
 
 export async function uploadVideo(file: File, userId: string) {
   if (typeof window === 'undefined') return '';

@@ -1,11 +1,14 @@
 'use client'
 
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 import { Music, User, LogIn, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import GoogleLogin from '../../components/GoogleLogin'
+import { createClient } from '@/src/lib/supabase/client'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 interface HeaderProps {
   onProfileClick?: () => void
@@ -14,10 +17,36 @@ interface HeaderProps {
 
 export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   const router = useRouter()
-  const { user, isAuthenticated, logout } = useAuth()
+  const { logout: authContextLogout } = useAuth()
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const handleLogout = () => {
-    logout()
+  const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      setSupabaseUser(user ?? null)
+      setLoading(false)
+    }
+    init()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSupabaseUser(session?.user ?? null)
+      }
+    )
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [supabase])
+
+  const isAuthenticated = !!supabaseUser
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    authContextLogout()
     router.push('/')
   }
 
@@ -60,41 +89,44 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
               <GoogleLogin />
             </div>
             
-            {/* Botón Perfil - Si hay sesión muestra perfil, si no obliga a iniciar sesión */}
-            <Button
-              variant="ghost"
-              onClick={() => {
-                if (isAuthenticated) {
-                  onProfileClick?.()
-                } else {
-                  onLoginClick?.()
-                }
-              }}
-              className="flex items-center gap-2 text-gray-700 hover:text-purple-600"
-            >
-              <User className="w-4 h-4" />
-              <span className="hidden sm:inline">Perfil</span>
-            </Button>
+            {/* Botón Perfil - basado en sesión real de Supabase */}
+            {!loading && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    if (isAuthenticated) {
+                      router.push('/profile')
+                    } else {
+                      router.push('/login')
+                    }
+                  }}
+                  className="flex items-center gap-2 text-gray-700 hover:text-purple-600"
+                >
+                  <User className="w-4 h-4" />
+                  <span className="hidden sm:inline">Perfil</span>
+                </Button>
 
-            {/* Botón Iniciar sesión / Cerrar sesión */}
-            {isAuthenticated ? (
-              <Button 
-                variant="outline" 
-                onClick={handleLogout}
-                className="flex items-center gap-2 border-purple-300 text-purple-600 hover:bg-purple-50"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Cerrar sesión</span>
-              </Button>
-            ) : (
-              <Button
-                onClick={onLoginClick}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white flex items-center gap-2 shadow-lg"
-              >
-                <LogIn className="w-4 h-4" />
-                <span className="hidden sm:inline">Iniciar sesión</span>
-                <span className="sm:hidden">Entrar</span>
-              </Button>
+                {isAuthenticated ? (
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLogout}
+                    className="flex items-center gap-2 border-purple-300 text-purple-600 hover:bg-purple-50"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden sm:inline">Cerrar sesión</span>
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={onLoginClick}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white flex items-center gap-2 shadow-lg"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span className="hidden sm:inline">Iniciar sesión</span>
+                    <span className="sm:hidden">Entrar</span>
+                  </Button>
+                )}
+              </>
             )}
           </div>
         </div>
