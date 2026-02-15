@@ -443,11 +443,12 @@ const mockProfiles: { [key: string]: UserProfile } = {
 export default function UsuarioProfilePage() {
   const params = useParams()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, followUser, unfollowUser, isFollowing } = useAuth()
   const { toast } = useToast()
   const userId = decodeURIComponent(params.id as string)
   const [userPosts, setUserPosts] = useState<MockPost[]>([])
   const [totalLikes, setTotalLikes] = useState(0)
+  const [following, setFollowing] = useState(false)
 
   // Buscar perfil del usuario - buscar por nombre artístico exacto o por ID
   // Primero buscar directamente por la clave del objeto, luego por nombre artístico
@@ -496,6 +497,12 @@ export default function UsuarioProfilePage() {
     return null
   }, [userId])
 
+  useEffect(() => {
+    if (userProfile) {
+      setFollowing(isFollowing(userProfile.nombreArtistico))
+    }
+  }, [userProfile, isFollowing])
+
   // Cargar publicaciones del usuario
   useEffect(() => {
     if (typeof window !== 'undefined' && userProfile) {
@@ -534,6 +541,40 @@ export default function UsuarioProfilePage() {
       }
     }
   }, [userProfile])
+
+  const handleFollow = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas iniciar sesión para seguir a alguien",
+        variant: "destructive"
+      })
+      return
+    }
+    if (following) {
+      unfollowUser(userProfile!.nombreArtistico)
+      setFollowing(false)
+    } else {
+      followUser(userProfile!.nombreArtistico)
+      setFollowing(true)
+    }
+  }
+
+  const handleProfileJam = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas iniciar sesión para enviar un JAM",
+        variant: "destructive"
+      })
+      return
+    }
+    window.dispatchEvent(new CustomEvent('showJamAnimation'))
+    toast({
+      title: "¡JAM enviado!",
+      description: `Tu solicitud fue enviada a ${userProfile!.nombreArtistico}`,
+    })
+  }
 
   const handleJam = (postId: string, usuario: string) => {
     if (!user) {
@@ -601,6 +642,29 @@ export default function UsuarioProfilePage() {
                 <span className="text-purple-600 font-semibold">{userProfile.nivelMusical}</span>
               </div>
               <p className="text-gray-700 mb-4">{userProfile.bio}</p>
+              
+              {/* Botones Seguir y JAM - solo si no es el propio perfil */}
+              {user?.username !== userProfile.nombreArtistico && (
+                <div className="flex gap-3 mb-4">
+                  <Button
+                    onClick={handleFollow}
+                    variant={following ? "outline" : "default"}
+                    className={following 
+                      ? "border-2 border-purple-300 text-purple-600 hover:bg-purple-50" 
+                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                    }
+                  >
+                    {following ? 'Siguiendo' : 'Seguir'}
+                  </Button>
+                  <Button
+                    onClick={handleProfileJam}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold"
+                  >
+                    <Music className="w-4 h-4 mr-2" />
+                    JAM
+                  </Button>
+                </div>
+              )}
               
               {/* Instrumentos y Estilos */}
               <div className="flex flex-wrap gap-2 mb-4">

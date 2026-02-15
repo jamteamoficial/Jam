@@ -96,7 +96,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                   variant="ghost"
                   onClick={() => {
                     if (isAuthenticated) {
-                      router.push('/profile')
+                      router.push('/perfil')
                     } else {
                       router.push('/login')
                     }

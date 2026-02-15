@@ -1,6 +1,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createClient } from '@/src/lib/supabase/client'
 
 export interface ProfileData {
   nombreCompleto: string
@@ -58,12 +59,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
-  // Cargar sesión desde localStorage al iniciar
+  // Cargar y mantener sesión: localStorage + sincronizar con Supabase (Google)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') return
+
+    const supabase = createClient()
+
+    const syncFromSupabase = async (supabaseUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string } }) => {
+      const userData: User = {
+        email: supabaseUser.email || `${supabaseUser.id}@jam.local`,
+        username: supabaseUser.email?.split('@')[0] || supabaseUser.id.slice(0, 8),
+        nombreCompleto: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || 'Usuario'
+      }
+      localStorage.setItem('user', JSON.stringify(userData))
+      localStorage.setItem('isAuthenticated', 'true')
+      setUser(userData)
+      setIsAuthenticated(true)
+    }
+
+    const initAuth = async () => {
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+      if (supabaseUser) {
+        await syncFromSupabase(supabaseUser)
+        return
+      }
       const savedUser = localStorage.getItem('user')
       const savedAuth = localStorage.getItem('isAuthenticated')
-      
       if (savedUser && savedAuth === 'true') {
         try {
           setUser(JSON.parse(savedUser))
@@ -75,6 +96,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
     }
+
+    initAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          await syncFromSupabase(session.user)
+        } else if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('user')
+          localStorage.removeItem('isAuthenticated')
+          setUser(null)
+          setIsAuthenticated(false)
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -299,19 +337,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return null
   }
 
-  const logout = () => {
-    // Limpiar likes del usuario al cerrar sesión (solo el estado de "me gusta", no el contador global)
+  const logout = async () => {
     if (user) {
       const userId = user.email || user.username || 'default'
       localStorage.removeItem(`likedPosts_${userId}`)
     }
-    
     localStorage.removeItem('user')
     localStorage.removeItem('isAuthenticated')
     setUser(null)
     setIsAuthenticated(false)
-    
-    // Forzar recarga de la página para actualizar los likes
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch {
+      // Ignorar si no hay sesión Supabase
+    }
     if (typeof window !== 'undefined') {
       window.location.reload()
     }

@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
+import { Music } from 'lucide-react'
 import Header from '../../components/Header'
 import { useAuth } from '../../context/AuthContext'
+import { useToast } from '@/src/lib/hooks/use-toast'
 import type { UserProfile } from '../../context/AuthContext'
 
 interface PostData {
@@ -111,6 +113,7 @@ export default function UserProfilePage() {
   const params = useParams()
   const router = useRouter()
   const { user, getUserProfile, followUser, unfollowUser, isFollowing } = useAuth()
+  const { toast } = useToast()
   const username = params.username as string
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [userPosts, setUserPosts] = useState<PostData[]>([])
@@ -165,6 +168,22 @@ export default function UserProfilePage() {
       followUser(username)
       setFollowing(true)
     }
+  }
+
+  const handleJam = () => {
+    if (!user) {
+      toast({
+        title: "Inicia sesión",
+        description: "Necesitas iniciar sesión para enviar un JAM",
+        variant: "destructive"
+      })
+      return
+    }
+    window.dispatchEvent(new CustomEvent('showJamAnimation'))
+    toast({
+      title: "¡JAM enviado!",
+      description: `Tu solicitud fue enviada a ${userProfile?.name || username}`,
+    })
   }
 
   const isOwnProfile = user?.username === username
@@ -224,20 +243,29 @@ export default function UserProfilePage() {
                   <p className="text-lg text-gray-600">@{userProfile.username}</p>
                 </div>
                 {!isOwnProfile && (
-                  <button
-                    onClick={handleFollow}
-                    className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-                      following
-                        ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        : 'bg-purple-600 text-white hover:bg-purple-700'
-                    }`}
-                  >
-                    {following ? 'Siguiendo' : 'Seguir'}
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleFollow}
+                      className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
+                        following
+                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                      }`}
+                    >
+                      {following ? 'Siguiendo' : 'Seguir'}
+                    </button>
+                    <button
+                      onClick={handleJam}
+                      className="px-6 py-2 rounded-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white transition-colors flex items-center gap-2"
+                    >
+                      <Music className="w-4 h-4" />
+                      JAM
+                    </button>
+                  </div>
                 )}
                 {isOwnProfile && (
                   <Link
-                    href="/profile"
+                    href="/perfil"
                     className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
                   >
                     Editar Perfil
