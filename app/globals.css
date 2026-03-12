@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --rolex: #1A6329;
+  --rolex-dark: #145023;
+  --rolex-light: #228B3A;
+  --rolex-20: rgba(26, 99, 41, 0.2);
+  --rolex-50: rgba(26, 99, 41, 0.5);
+}
+
+/* Garantizar que todos los botones con rolex usen el verde */
+.bg-rolex { background-color: var(--rolex) !important; }
+.hover\:bg-rolex-dark:hover { background-color: var(--rolex-dark) !important; }
+.text-rolex { color: var(--rolex) !important; }
+.border-rolex { border-color: var(--rolex) !important; }
+
 @keyframes jam-pulse {
   0%, 100% {
     opacity: 1;

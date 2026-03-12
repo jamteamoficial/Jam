@@ -110,11 +110,13 @@ export default function Post({ name, username, avatar, content, likes: initialLi
         {!isOwnPost && (
           <button
             onClick={handleFollow}
-            className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
-              following
-                ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                : 'bg-purple-600 text-white hover:bg-purple-700'
+            className={`px-4 py-2 rounded-lg font-semibold transition-colors hover:opacity-90 ${
+              following ? 'border-2' : 'text-white'
             }`}
+            style={following 
+              ? { borderColor: 'var(--rolex)', color: 'var(--rolex)', backgroundColor: 'transparent' } 
+              : { backgroundColor: 'var(--rolex)' }
+            }
           >
             {following ? 'Siguiendo' : '+'}
           </button>

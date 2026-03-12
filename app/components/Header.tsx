@@ -51,21 +51,22 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-purple-200 shadow-md">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-rolex/30 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo JAM - Botón grande */}
           <Link 
             href="/" 
             className="flex items-center gap-3 group"
+            style={{ color: 'var(--rolex)' }}
           >
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full blur-md opacity-50 group-hover:opacity-75 transition-opacity"></div>
-              <div className="relative w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+              <div className="absolute inset-0 rounded-full blur-md opacity-50 group-hover:opacity-75 transition-opacity" style={{ backgroundColor: 'var(--rolex)' }}></div>
+              <div className="relative w-12 h-12 rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform" style={{ backgroundColor: 'var(--rolex)' }}>
                 <Music className="w-6 h-6 text-white" />
               </div>
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-green-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform">
+            <h1 className="text-3xl font-bold group-hover:scale-105 transition-transform" style={{ color: 'var(--rolex)' }}>
               JAM
             </h1>
           </Link>
@@ -77,7 +78,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
               <input
                 type="text"
                 placeholder="Buscar músicos, bandas..."
-                className="w-full pl-10 pr-4 py-2 border-2 border-purple-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border-2 border-rolex/30 rounded-full focus:outline-none focus:ring-2 focus:ring-rolex focus:border-transparent"
               />
             </div>
           </div>
@@ -101,7 +102,8 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                       router.push('/login')
                     }
                   }}
-                  className="flex items-center gap-2 text-gray-700 hover:text-purple-600"
+                  className="flex items-center gap-2 font-semibold hover:opacity-80"
+                  style={{ color: 'var(--rolex)' }}
                 >
                   <User className="w-4 h-4" />
                   <span className="hidden sm:inline">Perfil</span>
@@ -111,7 +113,8 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                   <Button 
                     variant="outline" 
                     onClick={handleLogout}
-                    className="flex items-center gap-2 border-purple-300 text-purple-600 hover:bg-purple-50"
+                    className="flex items-center gap-2 border-2 hover:opacity-90"
+                    style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
                   >
                     <LogOut className="w-4 h-4" />
                     <span className="hidden sm:inline">Cerrar sesión</span>
@@ -119,7 +122,8 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                 ) : (
                   <Button
                     onClick={onLoginClick}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white flex items-center gap-2 shadow-lg"
+                    className="text-white flex items-center gap-2 shadow-lg hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
                     <LogIn className="w-4 h-4" />
                     <span className="hidden sm:inline">Iniciar sesión</span>

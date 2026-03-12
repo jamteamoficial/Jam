@@ -198,12 +198,12 @@ export default function ChatsPanel() {
   }, [myUserId])
 
   return (
-    <div className="h-full bg-white border-r-2 border-purple-200 overflow-y-auto">
+    <div className="h-full bg-white border-r-2 border-rolex/30 overflow-y-auto">
       <div className="p-4">
         <div className="flex items-center justify-between gap-2 mb-4">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-purple-600" />
-            <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <div className="flex items-center gap-2" style={{ color: 'var(--rolex)' }}>
+            <MessageCircle className="w-5 h-5" style={{ color: 'var(--rolex)' }} />
+            <h2 className="text-xl font-bold" style={{ color: 'var(--rolex)' }}>
               Chats
             </h2>
           </div>
@@ -214,7 +214,8 @@ export default function ChatsPanel() {
               // Disparar evento para ocultar el panel desde el componente padre
               window.dispatchEvent(new CustomEvent('toggleChatsPanel'))
             }}
-            className="p-1 rounded-full hover:bg-purple-100 transition-colors text-purple-600"
+            className="p-1 rounded-full transition-colors hover:opacity-80"
+            style={{ color: 'var(--rolex)' }}
             aria-label="Ocultar chats"
           >
             <X className="w-4 h-4" />
@@ -232,11 +233,11 @@ export default function ChatsPanel() {
               <Link
                 key={chat.id}
                 href={`/chat/${chat.id}`}
-                className="block p-3 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors border-2 border-transparent hover:border-purple-200 active:scale-95"
+                className="block p-3 rounded-xl hover:bg-rolex/10 cursor-pointer transition-colors border-2 border-transparent hover:border-rolex/30 active:scale-95"
               >
                 <div className="flex items-start gap-3">
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--rolex-20)', border: '2px solid var(--rolex-50)' }}>
                       {chat.avatar}
                     </div>
                     {chat.mensajesNoLeidos > 0 && (
@@ -262,11 +263,11 @@ export default function ChatsPanel() {
               <Link
                 key={chat.id}
                 href={`/chat/${chat.id}`}
-                className="block p-3 rounded-xl hover:bg-purple-50 cursor-pointer transition-colors border-2 border-transparent hover:border-purple-200 active:scale-95"
+                className="block p-3 rounded-xl hover:bg-rolex/10 cursor-pointer transition-colors border-2 border-transparent hover:border-rolex/30 active:scale-95"
               >
                 <div className="flex items-start gap-3">
                   <div className="relative">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
+                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-2xl" style={{ backgroundColor: 'var(--rolex-20)', border: '2px solid var(--rolex-50)' }}>
                       {chat.avatar}
                     </div>
                     {chat.mensajesNoLeidos > 0 && (

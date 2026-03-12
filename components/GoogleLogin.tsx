@@ -42,7 +42,8 @@ export default function GoogleLogin() {
       type="button"
       onClick={handleLogin}
       disabled={loading}
-      className="flex items-center gap-2 bg-white text-gray-700 border border-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm hover:bg-gray-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+      className="flex items-center gap-2 border-2 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed hover:opacity-90"
+      style={{ backgroundColor: 'var(--rolex)', borderColor: 'var(--rolex)', color: 'white' }}
     >
       <img 
         src="https://www.svgrepo.com/show/475656/google-color.svg" 

@@ -12,14 +12,14 @@ interface CreateComunidadModalProps {
 }
 
 const COLOR_OPTIONS = [
-  { value: 'purple', label: 'Morado', gradient: 'from-purple-600 to-purple-700' },
+  { value: 'purple', label: 'Verde Rolex', gradient: 'from-rolex to-rolex-light' },
   { value: 'blue', label: 'Azul', gradient: 'from-blue-600 to-blue-700' },
   { value: 'red', label: 'Rojo', gradient: 'from-red-500 to-red-700' },
   { value: 'green', label: 'Verde', gradient: 'from-green-500 to-green-600' },
   { value: 'yellow', label: 'Amarillo', gradient: 'from-yellow-400 to-yellow-500' },
   { value: 'orange', label: 'Naranja', gradient: 'from-orange-500 to-orange-600' },
-  { value: 'indigo', label: 'Índigo', gradient: 'from-indigo-600 to-indigo-700' },
-  { value: 'pink', label: 'Rosa', gradient: 'from-pink-500 to-pink-600' },
+  { value: 'indigo', label: 'Índigo', gradient: 'from-rolex to-rolex-light' },
+  { value: 'pink', label: 'Rosa', gradient: 'from-rolex to-rolex-light' },
   { value: 'teal', label: 'Verde azulado', gradient: 'from-teal-500 to-teal-600' }
 ]
 
@@ -140,7 +140,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
 
   if (!isOpen) return null
 
-  const selectedColorGradient = COLOR_OPTIONS.find(c => c.value === color)?.gradient || 'from-purple-600 to-purple-700'
+  const selectedColorGradient = COLOR_OPTIONS.find(c => c.value === color)?.gradient || 'from-rolex to-rolex-light'
 
   return (
     <>
@@ -152,7 +152,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
       
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl border-2 border-purple-200 shadow-2xl">
+        <div className="w-full max-w-md bg-white rounded-2xl border-2 border-rolex/30 shadow-2xl">
           <div className="relative p-6">
             <button
               onClick={handleClose}
@@ -160,7 +160,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
             >
               <X className="w-4 h-4" />
             </button>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-6">
+            <h2 className="text-2xl font-bold text-rolex mb-6">
               Crear Comunidad
             </h2>
             
@@ -174,7 +174,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
                   type="text"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                   placeholder="Ej: Músicos de Jazz"
                   required
                   maxLength={50}
@@ -189,7 +189,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
                 <textarea
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                  className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                   rows={4}
                   placeholder="Describe tu comunidad..."
                   required
@@ -202,7 +202,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Icono
                 </label>
-                <div className="grid grid-cols-10 gap-2 p-3 border-2 border-purple-200 rounded-xl bg-gray-50">
+                <div className="grid grid-cols-10 gap-2 p-3 border-2 border-rolex/30 rounded-xl bg-gray-50">
                   {EMOJI_OPTIONS.map((emoji) => (
                     <button
                       key={emoji}
@@ -210,8 +210,8 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
                       onClick={() => setIcono(emoji)}
                       className={`w-10 h-10 rounded-lg text-2xl flex items-center justify-center transition-all ${
                         icono === emoji
-                          ? 'bg-purple-600 scale-110 shadow-md'
-                          : 'bg-white hover:bg-purple-100'
+                          ? 'bg-rolex scale-110 shadow-md'
+                          : 'bg-white hover:bg-rolex/10'
                       }`}
                     >
                       {emoji}
@@ -257,7 +257,8 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
               <Button 
                 type="submit" 
                 disabled={loading || !nombre.trim() || !descripcion.trim()}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-white font-bold py-6 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                style={{ backgroundColor: 'var(--rolex)' }}
               >
                 <Users className="w-4 h-4 mr-2" />
                 {loading ? 'Creando...' : 'Crear Comunidad'}

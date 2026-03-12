@@ -87,7 +87,7 @@ function PostCard({ post }: { post: PostData }) {
       href={`/post/${post.id}`}
       className="bg-white rounded-xl shadow-lg p-4 border border-gray-100 hover:shadow-xl transition-all cursor-pointer block"
     >
-      <div className="aspect-square bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg mb-3 flex items-center justify-center p-4">
+      <div className="aspect-square bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg mb-3 flex items-center justify-center p-4">
         <p className="text-gray-600 text-sm text-center line-clamp-3">{post.content}</p>
       </div>
       <div className="flex items-center justify-between text-sm">
@@ -190,7 +190,7 @@ export default function UserProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-gray-600">Cargando perfil...</p>
         </div>
@@ -200,7 +200,7 @@ export default function UserProfilePage() {
 
   if (!userProfile) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-8">
+      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
         <Header />
         <div className="max-w-4xl mx-auto mt-8">
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
@@ -208,7 +208,7 @@ export default function UserProfilePage() {
             <p className="text-gray-600 mb-6">El usuario @{username} no existe.</p>
             <Link 
               href="/"
-              className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-dark transition-colors font-semibold"
             >
               Volver al inicio
             </Link>
@@ -219,7 +219,7 @@ export default function UserProfilePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
       <Header />
       
       <div className="max-w-4xl mx-auto p-8">
@@ -231,7 +231,7 @@ export default function UserProfilePage() {
               <img 
                 src={userProfile.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop'} 
                 alt={userProfile.name}
-                className="w-32 h-32 rounded-full border-4 border-purple-500 object-cover"
+                className="w-32 h-32 rounded-full border-4 border-rolex object-cover"
               />
             </div>
 
@@ -246,17 +246,20 @@ export default function UserProfilePage() {
                   <div className="flex gap-3">
                     <button
                       onClick={handleFollow}
-                      className={`px-6 py-2 rounded-lg font-semibold transition-colors ${
-                        following
-                          ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                      className={`px-6 py-2 rounded-lg font-semibold transition-colors hover:opacity-90 ${
+                        following ? 'border-2' : 'text-white'
                       }`}
+                      style={following 
+                        ? { borderColor: 'var(--rolex)', color: 'var(--rolex)' } 
+                        : { backgroundColor: 'var(--rolex)' }
+                      }
                     >
                       {following ? 'Siguiendo' : 'Seguir'}
                     </button>
                     <button
                       onClick={handleJam}
-                      className="px-6 py-2 rounded-lg font-bold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white transition-colors flex items-center gap-2"
+                      className="px-6 py-2 rounded-lg font-bold text-white transition-colors flex items-center gap-2 hover:opacity-90"
+                      style={{ backgroundColor: 'var(--rolex)' }}
                     >
                       <Music className="w-4 h-4" />
                       JAM
@@ -266,7 +269,8 @@ export default function UserProfilePage() {
                 {isOwnProfile && (
                   <Link
                     href="/perfil"
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+                    className="px-6 py-2 text-white rounded-lg transition-colors font-semibold hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
                     Editar Perfil
                   </Link>

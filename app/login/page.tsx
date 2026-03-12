@@ -52,11 +52,11 @@ export default function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center p-8">
+    <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-8">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            <h1 className="text-4xl font-bold bg-gradient-to-r text-rolex  mb-2">
               🎸 Iniciar Sesión
             </h1>
             <p className="text-gray-600">Bienvenido de vuelta a la comunidad de músicos</p>
@@ -79,7 +79,7 @@ export default function Login() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="tu@email.com"
                 required
               />
@@ -95,7 +95,7 @@ export default function Login() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="••••••••"
                 required
               />
@@ -106,13 +106,14 @@ export default function Login() {
                 <input
                   type="checkbox"
                   id="remember"
-                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  className="w-4 h-4 rounded focus:ring-2 focus:ring-offset-0"
+                  style={{ accentColor: 'var(--rolex)' }}
                 />
-                <label htmlFor="remember" className="ml-2 text-sm text-gray-600">
+                <label htmlFor="remember" className="ml-2 text-sm font-semibold" style={{ color: 'var(--rolex)' }}>
                   Recordarme
                 </label>
               </div>
-              <Link href="#" className="text-sm text-purple-600 hover:text-purple-700 font-semibold">
+              <Link href="#" className="text-sm text-rolex hover:text-rolex-dark font-semibold">
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
@@ -120,7 +121,8 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3 text-white rounded-lg transition-colors font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+              style={{ backgroundColor: 'var(--rolex)' }}
             >
               {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
             </button>
@@ -129,7 +131,7 @@ export default function Login() {
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               ¿No tienes una cuenta?{' '}
-              <Link href="/register" className="text-purple-600 hover:text-purple-700 font-semibold">
+              <Link href="/register" className="text-rolex hover:text-rolex-dark font-semibold">
                 Regístrate aquí
               </Link>
             </p>

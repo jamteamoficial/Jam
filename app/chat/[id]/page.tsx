@@ -404,7 +404,7 @@ export default function ChatPage() {
   return (
     <div className="h-screen flex flex-col bg-white">
       {/* Header */}
-      <div className="border-b-2 border-purple-200 p-4 bg-white">
+      <div className="border-b-2 border-rolex/30 p-4 bg-white">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -413,7 +413,7 @@ export default function ChatPage() {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl">
+          <div className="w-12 h-12 rounded-full bg-rolex flex items-center justify-center text-2xl">
             {chatData.avatar}
           </div>
           <div>
@@ -424,10 +424,10 @@ export default function ChatPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-3xl mb-4">
+            <div className="w-16 h-16 rounded-full bg-rolex flex items-center justify-center text-3xl mb-4">
               {chatData.avatar}
             </div>
             <p className="text-gray-600">Inicia la conversación con {chatData.usuario}</p>
@@ -448,12 +448,12 @@ export default function ChatPage() {
                 <div
                   className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
                     isUser
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                      : 'bg-white text-gray-900 border-2 border-purple-200'
+                      ? 'bg-rolex text-white'
+                      : 'bg-white text-gray-900 border-2 border-rolex/30'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                  <p className={`text-xs mt-1 ${isUser ? 'text-purple-100' : 'text-gray-500'}`}>
+                  <p className={`text-xs mt-1 ${isUser ? 'text-white/80' : 'text-gray-500'}`}>
                     {new Date(message.created_at).toLocaleTimeString('es-CL', { 
                       hour: '2-digit', 
                       minute: '2-digit' 
@@ -468,13 +468,14 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="border-t-2 border-purple-200 p-4 bg-white">
+      <div className="border-t-2 border-rolex/30 p-4 bg-white">
         {!user ? (
           <div className="text-center py-4">
             <p className="text-gray-600 mb-2">Inicia sesión para enviar mensajes</p>
             <Button
               onClick={() => router.push('/')}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+              className="text-white hover:opacity-90"
+              style={{ backgroundColor: 'var(--rolex)' }}
             >
               Iniciar Sesión
             </Button>
@@ -492,13 +493,14 @@ export default function ChatPage() {
                 }
               }}
               placeholder="Escribe un mensaje..."
-              className="flex-1 px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+              className="flex-1 px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
               autoFocus
             />
             <Button
               onClick={sendMessage}
               disabled={!text.trim()}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+              style={{ backgroundColor: 'var(--rolex)' }}
             >
               <Send className="w-5 h-5" />
             </Button>

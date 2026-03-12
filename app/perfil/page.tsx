@@ -139,12 +139,12 @@ export default function PerfilPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Inicia sesión</h2>
           <p className="text-gray-600 mb-6">Necesitas iniciar sesión para crear un perfil</p>
           <Link href="/">
-            <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+            <Button className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
               Volver al inicio
             </Button>
           </Link>
@@ -154,23 +154,23 @@ export default function PerfilPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/">
-            <Button variant="ghost" className="flex items-center gap-2">
+            <Button variant="ghost" className="flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--rolex)' }}>
               <ArrowLeft className="w-5 h-5" />
               Volver
             </Button>
           </Link>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-rolex bg-clip-text text-transparent">
             Mi Perfil
           </h1>
         </div>
 
         {/* Formulario */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl border-2 border-purple-200 p-8 space-y-6">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-xl border-2 border-rolex/30 p-8 space-y-6">
           {/* Nombre Completo */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -180,7 +180,7 @@ export default function PerfilPage() {
               type="text"
               value={formData.nombreCompleto}
               onChange={(e) => handleInputChange('nombreCompleto', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+              className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
               placeholder="Tu nombre completo"
               required
             />
@@ -196,7 +196,7 @@ export default function PerfilPage() {
                 type="text"
                 value={formData.ciudad}
                 onChange={(e) => handleInputChange('ciudad', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="Santiago"
                 required
               />
@@ -209,7 +209,7 @@ export default function PerfilPage() {
                 type="text"
                 value={formData.pais}
                 onChange={(e) => handleInputChange('pais', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="Chile"
                 required
               />
@@ -226,7 +226,7 @@ export default function PerfilPage() {
                 type="number"
                 value={formData.edad}
                 onChange={(e) => handleInputChange('edad', e.target.value ? parseInt(e.target.value) : '')}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="25"
                 min="13"
                 max="100"
@@ -239,7 +239,7 @@ export default function PerfilPage() {
               <select
                 value={formData.nivelMusical}
                 onChange={(e) => handleInputChange('nivelMusical', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 required
               >
                 <option value="">Selecciona tu nivel</option>
@@ -263,9 +263,10 @@ export default function PerfilPage() {
                   onClick={() => toggleArrayItem('instrumentos', instrumento)}
                   className={`px-4 py-2 rounded-full font-medium transition-all ${
                     formData.instrumentos.includes(instrumento)
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      ? 'text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  style={formData.instrumentos.includes(instrumento) ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   {instrumento}
                 </button>
@@ -289,9 +290,10 @@ export default function PerfilPage() {
                   onClick={() => toggleArrayItem('estilosMusicales', estilo)}
                   className={`px-4 py-2 rounded-full font-medium transition-all ${
                     formData.estilosMusicales.includes(estilo)
-                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg'
+                      ? 'text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  style={formData.estilosMusicales.includes(estilo) ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   {estilo}
                 </button>
@@ -307,7 +309,7 @@ export default function PerfilPage() {
             <textarea
               value={formData.descripcion}
               onChange={(e) => handleInputChange('descripcion', e.target.value)}
-              className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+              className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
               rows={4}
               placeholder="Cuéntanos sobre ti, tu experiencia musical, qué buscas..."
               maxLength={500}
@@ -325,7 +327,7 @@ export default function PerfilPage() {
                 type="text"
                 value={formData.contactoWhatsapp}
                 onChange={(e) => handleInputChange('contactoWhatsapp', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="+56912345678"
               />
             </div>
@@ -337,7 +339,7 @@ export default function PerfilPage() {
                 type="text"
                 value={formData.contactoInstagram}
                 onChange={(e) => handleInputChange('contactoInstagram', e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="@tuusuario"
               />
             </div>
@@ -348,7 +350,8 @@ export default function PerfilPage() {
             <Button
               type="submit"
               disabled={loading || !formData.nombreCompleto.trim() || formData.instrumentos.length === 0}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-6 text-lg rounded-xl shadow-lg transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-white font-bold py-6 text-lg rounded-xl shadow-lg transition-all hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: 'var(--rolex)' }}
             >
               <Save className="w-5 h-5 mr-2" />
               {loading ? 'Guardando...' : 'Guardar Perfil'}

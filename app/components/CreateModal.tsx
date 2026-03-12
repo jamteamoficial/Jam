@@ -240,7 +240,7 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
       
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl border-2 border-purple-200 shadow-2xl">
+        <div className="w-full max-w-md bg-white rounded-2xl border-2 border-rolex/30 shadow-2xl">
           <div className="relative p-6">
             <button
               onClick={handleClose}
@@ -248,7 +248,7 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
             >
               <X className="w-4 h-4" />
             </button>
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-6">
+            <h2 className="text-2xl font-bold bg-rolex bg-clip-text text-transparent mb-6">
               Crear Contenido
             </h2>
             
@@ -259,9 +259,10 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                 onClick={() => setContentType('mensaje')}
                 className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
                   contentType === 'mensaje'
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    ? 'text-white shadow-lg'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
+                style={contentType === 'mensaje' ? { backgroundColor: 'var(--rolex)' } : undefined}
               >
                 <Type className="w-5 h-5 mx-auto mb-1" />
                 Mensaje
@@ -271,9 +272,10 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                 onClick={() => setContentType('video')}
                 className={`flex-1 px-4 py-3 rounded-xl font-medium transition-all ${
                   contentType === 'video'
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    ? 'text-white shadow-lg'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
+                style={contentType === 'video' ? { backgroundColor: 'var(--rolex)' } : undefined}
               >
                 <Video className="w-5 h-5 mx-auto mb-1" />
                 Video
@@ -291,9 +293,10 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                   onClick={() => setFeedType(feedType === 'descubrir' ? null : 'descubrir')}
                   className={`px-4 py-3 rounded-xl font-medium transition-all text-sm ${
                     feedType === 'descubrir'
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      ? 'text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  style={feedType === 'descubrir' ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   Descubrir
                 </button>
@@ -302,9 +305,10 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                   onClick={() => setFeedType(feedType === 'conectar' ? null : 'conectar')}
                   className={`px-4 py-3 rounded-xl font-medium transition-all text-sm ${
                     feedType === 'conectar'
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      ? 'text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  style={feedType === 'conectar' ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   Conectar
                 </button>
@@ -313,15 +317,16 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                   onClick={() => setFeedType(feedType === 'aprender' ? null : 'aprender')}
                   className={`px-4 py-3 rounded-xl font-medium transition-all text-sm ${
                     feedType === 'aprender'
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      ? 'text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  style={feedType === 'aprender' ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   Aprender
                 </button>
               </div>
               {feedType && (
-                <p className="text-xs text-purple-600 mt-2">
+                <p className="text-xs text-rolex mt-2">
                   ✓ También aparecerá en el feed {feedType === 'descubrir' ? 'Descubrir' : feedType === 'conectar' ? 'Conectar' : 'Aprender'}
                 </p>
               )}
@@ -336,7 +341,7 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                   <textarea
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-600"
+                    className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                     rows={6}
                     placeholder="¿Qué quieres compartir con la comunidad?"
                     required
@@ -349,10 +354,10 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                   </label>
                   
                   {selectedVideo ? (
-                    <div className="border-2 border-purple-300 rounded-xl p-4 bg-purple-50">
+                    <div className="border-2 border-rolex/40 rounded-xl p-4 bg-rolex/10">
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-3">
-                          <FileVideo className="w-8 h-8 text-purple-600" />
+                          <FileVideo className="w-8 h-8 text-rolex" />
                           <div>
                             <p className="font-semibold text-gray-900 text-sm">{selectedVideo.name}</p>
                             <p className="text-xs text-gray-600">
@@ -379,15 +384,16 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                         type="button"
                         variant="outline"
                         onClick={() => fileInputRef.current?.click()}
-                        className="w-full mt-3"
+                        className="w-full mt-3 border-2"
+                        style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
                       >
                         <Upload className="w-4 h-4 mr-2" />
                         Cambiar Video
                       </Button>
                     </div>
                   ) : (
-                    <div className="border-2 border-dashed border-purple-300 rounded-xl p-8 text-center hover:border-purple-400 transition-colors">
-                      <Video className="w-12 h-12 text-purple-400 mx-auto mb-3" />
+                    <div className="border-2 border-dashed border-rolex/40 rounded-xl p-8 text-center hover:border-rolex/50 transition-colors">
+                      <Video className="w-12 h-12 text-rolex/70 mx-auto mb-3" />
                       <p className="text-gray-600 mb-2">Haz clic para seleccionar un video</p>
                       <p className="text-sm text-gray-500 mb-4">MP4, MOV, AVI hasta 30MB</p>
                       <input
@@ -402,7 +408,8 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                         <Button 
                           type="button" 
                           variant="outline" 
-                          className="mt-2 cursor-pointer"
+                          className="mt-2 cursor-pointer border-2"
+                          style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
                           onClick={() => fileInputRef.current?.click()}
                         >
                           <Upload className="w-4 h-4 mr-2" />
@@ -421,7 +428,8 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
                   (contentType === 'mensaje' && !text.trim()) ||
                   (contentType === 'video' && !selectedVideo)
                 }
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full text-white font-bold py-6 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                style={{ backgroundColor: 'var(--rolex)' }}
               >
                 <Music className="w-4 h-4 mr-2" />
                 {loading ? 'Publicando...' : contentType === 'video' ? 'Publicar Video' : 'Publicar'}

@@ -64,11 +64,11 @@ export default function ConectarFeed() {
 
   const getGradientClass = (index: number) => {
     const gradients = [
-      'bg-gradient-to-br from-purple-100 to-pink-100',
+      'bg-gradient-to-br from-green-100 to-emerald-100',
       'bg-gradient-to-br from-blue-100 to-cyan-100',
       'bg-gradient-to-br from-green-100 to-emerald-100',
       'bg-gradient-to-br from-yellow-100 to-orange-100',
-      'bg-gradient-to-br from-indigo-100 to-purple-100',
+      'bg-gradient-to-br from-emerald-100 to-green-100',
       'bg-gradient-to-br from-pink-100 to-rose-100',
       'bg-gradient-to-br from-amber-100 to-yellow-100',
       'bg-gradient-to-br from-teal-100 to-green-100'
@@ -77,7 +77,7 @@ export default function ConectarFeed() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 py-8">
+    <div className="relative min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-green-50 py-8">
       {/* Tabs de Feed */}
       <FeedTabs />
 
@@ -85,7 +85,7 @@ export default function ConectarFeed() {
       <div className="max-w-4xl mx-auto px-4">
         {currentPosts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-96 text-center">
-            <Music className="w-20 h-20 text-purple-300 mb-4" />
+            <Music className="w-20 h-20 text-rolex/50 mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay publicaciones aún</h2>
             <p className="text-gray-600 mb-6">Sé el primero en compartir</p>
           </div>
@@ -94,7 +94,7 @@ export default function ConectarFeed() {
             {currentPosts.map((post, index) => (
               <div
                 key={post.id}
-                className="relative bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-purple-100 hover:border-purple-300 transition-all hover:shadow-xl"
+                className="relative bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-rolex/20 hover:border-rolex/40 transition-all hover:shadow-xl"
               >
                 <div className={`absolute top-0 left-0 right-0 h-32 ${getGradientClass(index)}`} />
 
@@ -108,7 +108,7 @@ export default function ConectarFeed() {
                         {post.usuario}
                       </h3>
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="px-2 py-1 bg-purple-100 rounded-full font-semibold text-purple-700">
+                        <span className="px-2 py-1 bg-rolex/20 rounded-full font-semibold text-rolex">
                           🎸 {post.instrumento}
                         </span>
                         <span className="px-2 py-1 bg-blue-100 rounded-full font-semibold text-blue-700">
@@ -131,7 +131,7 @@ export default function ConectarFeed() {
                   <div className="flex items-center gap-3">
                     <Button
                       onClick={() => handleJam(post.id, post.usuario)}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-105"
+                      className="flex-1 bg-rolex hover:bg-rolex-dark text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-105"
                     >
                       <Music className="w-4 h-4 mr-2" />
                       JAM
@@ -156,7 +156,7 @@ export default function ConectarFeed() {
           const event = new CustomEvent('openCreateModal')
           window.dispatchEvent(event)
         }}
-        className="fixed bottom-8 right-8 w-20 h-20 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 z-50"
+        className="fixed bottom-8 right-8 w-20 h-20 bg-rolex hover:bg-rolex-dark text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 z-50"
         aria-label="Crear publicación"
       >
         +

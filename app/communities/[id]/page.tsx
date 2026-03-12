@@ -36,7 +36,7 @@ const communities: Community[] = [
     description: 'Encuentra músicos para formar tu banda',
     members: 2100,
     icon: '🎤',
-    color: 'from-purple-500 to-pink-500'
+    color: 'from-rolex to-rolex-light'
   },
   {
     id: '4',
@@ -60,7 +60,7 @@ const communities: Community[] = [
     description: 'Comparte tu música acústica y sinfónica',
     members: 780,
     icon: '🎻',
-    color: 'from-indigo-500 to-purple-500'
+    color: 'from-rolex to-rolex-light'
   }
 ]
 
@@ -76,12 +76,12 @@ export default function CommunityPage({ params }: { params: { id: string } }) {
 
   if (!community) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-8">
+      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
         <Header />
         <div className="max-w-4xl mx-auto mt-8">
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Comunidad no encontrada</h1>
-            <Link href="/" className="text-purple-600 hover:text-purple-700 font-semibold">
+            <Link href="/" className="text-rolex hover:text-rolex-dark font-semibold">
               Volver al inicio
             </Link>
           </div>
@@ -91,7 +91,7 @@ export default function CommunityPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-8">
+    <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
       <Header />
       
       <div className="max-w-6xl mx-auto mt-8">
@@ -99,7 +99,7 @@ export default function CommunityPage({ params }: { params: { id: string } }) {
         <div className="mb-6">
           <Link 
             href="/"
-            className="inline-flex items-center space-x-2 px-4 py-2 bg-white text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-semibold shadow-md border border-purple-200"
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-white text-rolex rounded-lg hover:bg-rolex/10 transition-colors font-semibold shadow-md border border-rolex/30"
           >
             <span>←</span>
             <span>Volver al inicio</span>
@@ -129,11 +129,12 @@ export default function CommunityPage({ params }: { params: { id: string } }) {
                       setMemberCount(memberCount - 1)
                     }
                   }}
-                  className={`px-6 py-2 rounded-lg transition-colors font-semibold ${
+                  className={`px-6 py-2 rounded-lg transition-colors font-semibold hover:opacity-90 ${
                     isJoined
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                      : 'text-white'
                   }`}
+                  style={!isJoined ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   {isJoined ? '✓ Unido' : '+ Unirse a la comunidad'}
                 </button>

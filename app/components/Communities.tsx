@@ -40,7 +40,7 @@ const communities: Community[] = [
     description: 'Encuentra músicos para formar tu banda',
     members: 2100,
     icon: '🎤',
-    color: 'from-purple-500 to-pink-500'
+    color: 'from-rolex to-rolex-light'
   },
   {
     id: '4',
@@ -64,7 +64,7 @@ const communities: Community[] = [
     description: 'Comparte tu música acústica y sinfónica',
     members: 780,
     icon: '🎻',
-    color: 'from-indigo-500 to-purple-500'
+    color: 'from-rolex to-rolex-light'
   }
 ]
 
@@ -116,7 +116,7 @@ export default function Communities() {
                   className={`w-full py-2 rounded-lg font-semibold transition-colors ${
                     isJoined
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-purple-600 text-white hover:bg-purple-700'
+                      : 'bg-rolex text-white hover:bg-rolex-dark'
                   }`}
                 >
                   {isJoined ? '✓ Unirse' : '+ Unirse'}
@@ -127,7 +127,7 @@ export default function Communities() {
         })}
       </div>
 
-      <button className="w-full mt-4 py-2 border-2 border-purple-600 text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors">
+      <button className="w-full mt-4 py-2 rounded-lg font-semibold transition-colors hover:opacity-90 text-white" style={{ backgroundColor: 'var(--rolex)', border: '2px solid var(--rolex)' }}>
         Ver todas las comunidades
       </button>
     </div>

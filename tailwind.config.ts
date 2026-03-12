@@ -7,7 +7,15 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        rolex: {
+          DEFAULT: '#1A6329',
+          light: '#228B3A',
+          dark: '#145023',
+        },
+      },
+    },
   },
   plugins: [],
 };

@@ -595,12 +595,13 @@ export default function UsuarioProfilePage() {
 
   if (!userProfile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Usuario no encontrado</h2>
           <Button
             onClick={() => router.push('/')}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+            className="text-white hover:opacity-90"
+            style={{ backgroundColor: 'var(--rolex)' }}
           >
             Volver al inicio
           </Button>
@@ -610,14 +611,15 @@ export default function UsuarioProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       {/* Header */}
-      <div className="bg-white border-b-2 border-purple-200 sticky top-16 z-40">
+      <div className="bg-white border-b-2 border-rolex/30 sticky top-16 z-40">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="flex items-center gap-2 mb-4"
+            className="flex items-center gap-2 mb-4 hover:opacity-80"
+            style={{ color: 'var(--rolex)' }}
           >
             <ArrowLeft className="w-5 h-5" />
             Volver
@@ -627,19 +629,19 @@ export default function UsuarioProfilePage() {
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Perfil Header */}
-        <div className="bg-white rounded-2xl shadow-lg border-2 border-purple-200 p-8 mb-6">
+        <div className="bg-white rounded-2xl shadow-lg border-2 border-rolex/30 p-8 mb-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-6xl flex-shrink-0">
+            <div className="w-32 h-32 rounded-full bg-rolex flex items-center justify-center text-6xl flex-shrink-0">
               {userProfile.avatar}
             </div>
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">{userProfile.nombreArtistico}</h1>
-              <p className="text-xl text-purple-600 font-semibold mb-2">{userProfile.instrumento}</p>
+              <p className="text-xl text-rolex font-semibold mb-2">{userProfile.instrumento}</p>
               <div className="flex items-center gap-2 text-gray-600 mb-4">
                 <MapPin className="w-4 h-4" />
                 <span>{userProfile.ciudad}</span>
                 <span className="mx-2">•</span>
-                <span className="text-purple-600 font-semibold">{userProfile.nivelMusical}</span>
+                <span className="text-rolex font-semibold">{userProfile.nivelMusical}</span>
               </div>
               <p className="text-gray-700 mb-4">{userProfile.bio}</p>
               
@@ -650,15 +652,20 @@ export default function UsuarioProfilePage() {
                     onClick={handleFollow}
                     variant={following ? "outline" : "default"}
                     className={following 
-                      ? "border-2 border-purple-300 text-purple-600 hover:bg-purple-50" 
-                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                      ? "border-2 hover:opacity-90" 
+                      : "text-white font-semibold hover:opacity-90"
+                    }
+                    style={following 
+                      ? { borderColor: 'var(--rolex)', color: 'var(--rolex)' } 
+                      : { backgroundColor: 'var(--rolex)' }
                     }
                   >
                     {following ? 'Siguiendo' : 'Seguir'}
                   </Button>
                   <Button
                     onClick={handleProfileJam}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold"
+                    className="text-white font-bold hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
                     <Music className="w-4 h-4 mr-2" />
                     JAM
@@ -669,7 +676,7 @@ export default function UsuarioProfilePage() {
               {/* Instrumentos y Estilos */}
               <div className="flex flex-wrap gap-2 mb-4">
                 {userProfile.instrumentos.map((inst, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold">
+                  <span key={idx} className="px-3 py-1 bg-rolex/20 text-rolex rounded-full text-sm font-semibold">
                     {inst}
                   </span>
                 ))}
@@ -699,7 +706,7 @@ export default function UsuarioProfilePage() {
                       href={`https://instagram.com/${userProfile.contactoInstagram.replace('@', '')}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl hover:opacity-90 transition-opacity"
+                      className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-rolex to-rolex-light text-white rounded-xl hover:opacity-90 transition-opacity"
                     >
                       <Instagram className="w-4 h-4" />
                       Instagram
@@ -711,7 +718,7 @@ export default function UsuarioProfilePage() {
           </div>
 
           {/* Estadísticas */}
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-purple-200">
+          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-rolex/30">
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
                 <Heart className="w-5 h-5 text-red-500" />
@@ -721,14 +728,14 @@ export default function UsuarioProfilePage() {
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
-                <Music className="w-5 h-5 text-purple-600" />
+                <Music className="w-5 h-5 text-rolex" />
                 <span className="text-2xl font-bold text-gray-900">{userPosts.length}</span>
               </div>
               <p className="text-sm text-gray-600">Publicaciones</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
-                <Users className="w-5 h-5 text-blue-600" />
+                <Users className="w-5 h-5 text-rolex" />
                 <span className="text-2xl font-bold text-gray-900">{userProfile.seguidores}</span>
               </div>
               <p className="text-sm text-gray-600">Seguidores</p>
@@ -739,13 +746,13 @@ export default function UsuarioProfilePage() {
         {/* Publicaciones del Usuario */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Music className="w-6 h-6 text-purple-600" />
+            <Music className="w-6 h-6 text-rolex" />
             Publicaciones
           </h2>
           
           {userPosts.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-lg border-2 border-purple-200 p-12 text-center">
-              <Music className="w-16 h-16 text-purple-300 mx-auto mb-4" />
+            <div className="bg-white rounded-2xl shadow-lg border-2 border-rolex/30 p-12 text-center">
+              <Music className="w-16 h-16 text-rolex/50 mx-auto mb-4" />
               <p className="text-gray-600 text-lg">Este usuario aún no ha publicado nada</p>
             </div>
           ) : (
@@ -753,15 +760,15 @@ export default function UsuarioProfilePage() {
               {userPosts.map((post) => (
                 <div
                   key={post.id}
-                  className="bg-white rounded-2xl shadow-lg border-2 border-purple-200 p-6 hover:shadow-xl transition-all"
+                  className="bg-white rounded-2xl shadow-lg border-2 border-rolex/30 p-6 hover:shadow-xl transition-all"
                 >
                   <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl mr-3">
+                    <div className="w-12 h-12 rounded-full bg-rolex flex items-center justify-center text-2xl mr-3">
                       {post.avatar}
                     </div>
                     <div>
                       <h3 className="font-bold text-lg text-gray-900">{post.usuario}</h3>
-                      <p className="text-sm text-purple-600">{post.instrumento}</p>
+                      <p className="text-sm text-rolex">{post.instrumento}</p>
                     </div>
                   </div>
                   <p className="text-gray-700 mb-4">{post.texto}</p>
@@ -773,7 +780,8 @@ export default function UsuarioProfilePage() {
 
                   <Button
                     onClick={() => handleJam(post.id, post.usuario)}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-xl"
+                    className="w-full text-white font-bold py-3 rounded-xl hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
                     <Music className="w-4 h-4 mr-2" />
                     JAM

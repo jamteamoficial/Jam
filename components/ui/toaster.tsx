@@ -10,7 +10,7 @@ export function Toaster() {
       <div className={`rounded-lg shadow-lg p-4 min-w-[300px] ${
         currentToast.variant === 'destructive' 
           ? 'bg-red-600 text-white' 
-          : 'bg-white border-l-4 border-purple-600 text-gray-800 shadow-xl'
+          : 'bg-white border-l-4 border-rolex text-gray-800 shadow-xl'
       }`}>
         <h4 className="font-bold text-sm">{currentToast.title}</h4>
         {currentToast.description && (

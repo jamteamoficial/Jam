@@ -63,10 +63,10 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
 
       {/* Modal */}
       <div className="fixed inset-0 flex items-center justify-center p-4 z-50">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border-2 border-purple-200">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border-2 border-rolex/30">
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-bold text-rolex">
                 Iniciar Sesión
               </h2>
               <button
@@ -86,7 +86,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="tu@email.com"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rolex"
                   />
                 </div>
               </div>
@@ -99,19 +99,19 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="********"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rolex"
                   />
                 </div>
               </div>
               <Button
                 onClick={handleLogin}
                 disabled={loading}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-bold py-3 rounded-lg shadow-lg"
+                className="w-full bg-rolex hover:bg-rolex-dark text-white font-bold py-3 rounded-lg shadow-lg"
               >
                 {loading ? 'Iniciando...' : 'Entrar a JAM'}
               </Button>
               <p className="text-center text-sm text-gray-600">
-                ¿No tienes cuenta? <Link href="/registro" className="text-purple-600 hover:underline" onClick={onClose}>Regístrate</Link>
+                ¿No tienes cuenta? <Link href="/registro" className="text-rolex hover:underline" onClick={onClose}>Regístrate</Link>
               </p>
             </div>
           </div>

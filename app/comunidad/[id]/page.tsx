@@ -10,17 +10,17 @@ import { useToast } from '@/src/lib/hooks/use-toast'
 // Helper functions (se mueven antes de los datos)
 const getColorClasses = (color: string) => {
   const colors: Record<string, string> = {
-    purple: 'from-purple-600 to-purple-700',
-    blue: 'from-blue-600 to-blue-700',
+    purple: 'from-rolex to-rolex-light',
+    blue: 'from-rolex to-rolex-light',
     red: 'from-red-500 to-red-700',
     green: 'from-green-500 to-green-600',
     yellow: 'from-yellow-400 to-yellow-500',
     orange: 'from-orange-500 to-orange-600',
-    indigo: 'from-indigo-600 to-indigo-700',
-    pink: 'from-pink-500 to-pink-600',
+    indigo: 'from-rolex to-rolex-light',
+    pink: 'from-rolex to-rolex-light',
     teal: 'from-teal-500 to-teal-600'
   }
-  return colors[color] || 'from-purple-600 to-blue-600'
+  return colors[color] || 'from-rolex to-rolex-light'
 }
 
 const formatDate = (dateString: string) => {
@@ -259,16 +259,17 @@ export default function ComunidadPage() {
 
   if (!comunidad) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
+      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
         <div className="text-center">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-4xl mb-4 mx-auto">
+          <div className="w-20 h-20 rounded-full bg-gradient-to-r from-rolex to-rolex-light flex items-center justify-center text-4xl mb-4 mx-auto">
             👥
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Comunidad no encontrada</h2>
           <p className="text-gray-600 mb-4">La comunidad que buscas no existe</p>
           <Button
             onClick={() => router.push('/')}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white"
+            className="text-white hover:opacity-90"
+            style={{ backgroundColor: 'var(--rolex)' }}
           >
             Volver al inicio
           </Button>
@@ -278,14 +279,15 @@ export default function ComunidadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       {/* Header con navegación */}
-      <div className="bg-white border-b-2 border-purple-200 p-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b-2 border-rolex/30 p-4 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto">
           <Button
             variant="ghost"
             onClick={() => router.back()}
-            className="flex items-center gap-2 mb-4"
+            className="flex items-center gap-2 mb-4 hover:opacity-80"
+            style={{ color: 'var(--rolex)' }}
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Volver</span>
@@ -294,7 +296,7 @@ export default function ComunidadPage() {
       </div>
 
       {/* Hero Section - Perfil de la Comunidad */}
-      <div className="bg-white border-b-2 border-purple-200">
+      <div className="bg-white border-b-2 border-rolex/30">
         <div className="max-w-7xl mx-auto p-6 md:p-8">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             {/* Avatar grande */}
@@ -311,12 +313,12 @@ export default function ComunidadPage() {
               {/* Stats */}
               <div className="flex flex-wrap items-center gap-6 mb-4">
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Users className="w-5 h-5 text-purple-600" />
+                  <Users className="w-5 h-5 text-rolex" />
                   <span className="font-semibold text-lg">{formatNumber(memberCount)}</span>
                   <span>miembros</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-600">
-                  <Calendar className="w-5 h-5 text-purple-600" />
+                  <Calendar className="w-5 h-5 text-rolex" />
                   <span>Creada el {formatDate(comunidad.fechaCreacion)}</span>
                 </div>
               </div>
@@ -329,8 +331,9 @@ export default function ComunidadPage() {
                   className={`${
                     isJoined
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 border-2 border-gray-300'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white border-2 border-transparent'
+                      : 'text-white border-2 border-transparent hover:opacity-90'
                   } font-semibold px-6 py-3 text-lg transition-all`}
+                  style={!isJoined ? { backgroundColor: 'var(--rolex)' } : undefined}
                 >
                   {isJoined ? (
                     <>
@@ -348,7 +351,8 @@ export default function ComunidadPage() {
                 {isJoined && (
                   <Button
                     onClick={handleChatClick}
-                    className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold px-6 py-3 text-lg border-2 border-transparent transition-all"
+                    className="text-white font-semibold px-6 py-3 text-lg border-2 border-transparent transition-all hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
                     Chat Comunitario
@@ -361,7 +365,7 @@ export default function ComunidadPage() {
       </div>
 
       {/* Descripción Completa */}
-      <div className="bg-white border-b-2 border-purple-200">
+      <div className="bg-white border-b-2 border-rolex/30">
         <div className="max-w-7xl mx-auto p-6 md:p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Sobre esta comunidad</h2>
           <p className="text-gray-700 text-lg leading-relaxed max-w-4xl">
@@ -373,7 +377,7 @@ export default function ComunidadPage() {
       {/* Posts de la comunidad */}
       <div className="max-w-7xl mx-auto p-6 md:p-8">
         <div className="flex items-center gap-3 mb-6">
-          <Music className="w-6 h-6 text-purple-600" />
+          <Music className="w-6 h-6 text-rolex" />
           <h2 className="text-2xl font-bold text-gray-900">Publicaciones Recientes</h2>
         </div>
         
@@ -382,10 +386,10 @@ export default function ComunidadPage() {
             {comunidad.posts.map((post) => (
               <div
                 key={post.id}
-                className="bg-white rounded-xl p-6 border-2 border-purple-200 hover:border-purple-300 transition-all hover:shadow-lg"
+                className="bg-white rounded-xl p-6 border-2 border-rolex/30 hover:border-rolex/40 transition-all hover:shadow-lg"
               >
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-2xl flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-r from-rolex to-rolex-light flex items-center justify-center text-2xl flex-shrink-0">
                     {post.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -398,7 +402,7 @@ export default function ComunidadPage() {
             ))}
           </div>
         ) : (
-          <div className="bg-white rounded-xl p-12 text-center border-2 border-purple-200">
+          <div className="bg-white rounded-xl p-12 text-center border-2 border-rolex/30">
             <Music className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600 text-lg">Aún no hay publicaciones en esta comunidad</p>
             <p className="text-gray-500 mt-2">¡Sé el primero en compartir algo!</p>

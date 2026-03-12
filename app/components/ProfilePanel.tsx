@@ -58,7 +58,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
         <div className="p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <h2 className="text-3xl font-bold bg-rolex ">
               Mi Perfil
             </h2>
             <button
@@ -72,8 +72,8 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
           {isAuthenticated && user ? (
             <div className="space-y-6">
               {/* Profile Summary */}
-              <div className="border-2 border-purple-200 rounded-xl shadow-lg p-6 flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-r from-purple-600 to-blue-600 flex items-center justify-center text-5xl text-white font-bold mb-4">
+              <div className="border-2 border-rolex/30 rounded-xl shadow-lg p-6 flex flex-col items-center text-center">
+                <div className="w-24 h-24 rounded-full bg-rolex flex items-center justify-center text-5xl text-white font-bold mb-4">
                   {profileData?.nombreCompleto 
                     ? profileData.nombreCompleto[0].toUpperCase() 
                     : user.nombreCompleto 
@@ -85,7 +85,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
                 </h3>
                 <p className="text-gray-600 text-sm">@{user.username}</p>
                 {profileData?.nivelMusical && (
-                  <p className="text-sm text-purple-600 font-semibold mt-1">{profileData.nivelMusical}</p>
+                  <p className="text-sm text-rolex font-semibold mt-1">{profileData.nivelMusical}</p>
                 )}
 
                 <div className="flex justify-around w-full mt-6">
@@ -108,7 +108,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
 
                 {/* Botón Editar Perfil - Siempre visible */}
                 <Link href="/perfil" className="w-full mt-6" onClick={onClose}>
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                  <Button className="w-full text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
                     <Edit className="w-4 h-4 mr-2" />
                     Editar Perfil
                   </Button>
@@ -120,7 +120,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
                 <div className="border-2 border-blue-200 rounded-xl shadow-lg p-6 space-y-4">
                   {profileData.instrumentos && profileData.instrumentos.length > 0 && (
                     <div className="flex items-center gap-3">
-                      <Music className="w-5 h-5 text-purple-600" />
+                      <Music className="w-5 h-5 text-rolex" />
                       <p className="text-gray-700">
                         Instrumentos: <span className="font-semibold">{profileData.instrumentos.join(', ')}</span>
                       </p>
@@ -128,7 +128,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
                   )}
                   {profileData.estilosMusicales && profileData.estilosMusicales.length > 0 && (
                     <div className="flex items-center gap-3">
-                      <Music className="w-5 h-5 text-blue-600" />
+                      <Music className="w-5 h-5 text-rolex" />
                       <p className="text-gray-700">
                         Estilos: <span className="font-semibold">{profileData.estilosMusicales.join(', ')}</span>
                       </p>
@@ -136,7 +136,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
                   )}
                   {profileData.ciudad && (
                     <div className="flex items-center gap-3">
-                      <MapPin className="w-5 h-5 text-blue-600" />
+                      <MapPin className="w-5 h-5 text-rolex" />
                       <p className="text-gray-700">
                         Ciudad: <span className="font-semibold">{profileData.ciudad}{profileData.pais ? `, ${profileData.pais}` : ''}</span>
                       </p>
@@ -154,7 +154,7 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
                 <div className="border-2 border-yellow-200 rounded-xl shadow-lg p-6 bg-yellow-50 text-center">
                   <p className="text-gray-700 mb-4">Aún no has completado tu perfil</p>
                   <Link href="/perfil" onClick={onClose}>
-                    <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                    <Button className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
                       <Edit className="w-4 h-4 mr-2" />
                       Crear Perfil
                     </Button>
@@ -167,7 +167,8 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
               <p className="text-gray-600 mb-4">Inicia sesión para ver tu perfil</p>
               <Button 
                 onClick={onClose}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                className="text-white hover:opacity-90"
+                style={{ backgroundColor: 'var(--rolex)' }}
               >
                 Cerrar
               </Button>

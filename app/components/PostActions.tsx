@@ -127,18 +127,18 @@ export default function PostActions({ postId, usuario }: PostActionsProps) {
     <div className="flex items-center gap-3">
       <button
         onClick={handleLike}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
-          isLiked
-            ? 'bg-red-50 text-red-600 border-2 border-red-200'
-            : 'bg-gray-50 text-gray-600 border-2 border-gray-200 hover:bg-gray-100'
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:opacity-90 ${
+          isLiked ? 'text-white' : 'text-white'
         }`}
+        style={{ backgroundColor: 'var(--rolex)', border: '2px solid var(--rolex)' }}
       >
         <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
         <span className="font-semibold">{likeCount}</span>
       </button>
       <button
         onClick={handleComment}
-        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-50 text-gray-600 border-2 border-gray-200 hover:bg-gray-100 transition-all"
+        className="flex items-center gap-2 px-4 py-2 rounded-xl text-white transition-all hover:opacity-90"
+        style={{ backgroundColor: 'var(--rolex)', border: '2px solid var(--rolex)' }}
       >
         <MessageCircle className="w-5 h-5" />
         <span className="font-semibold">Comentar</span>

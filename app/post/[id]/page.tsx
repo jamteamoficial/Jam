@@ -165,7 +165,7 @@ export default function PostDetailPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 flex items-center justify-center">
+      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-gray-600">Cargando post...</p>
         </div>
@@ -175,14 +175,14 @@ export default function PostDetailPage() {
 
   if (!post) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100 p-8">
+      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
         <Header />
         <div className="max-w-4xl mx-auto mt-8">
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Post no encontrado</h1>
             <Link 
               href="/"
-              className="inline-block px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-dark transition-colors font-semibold"
             >
               Volver al inicio
             </Link>
@@ -193,14 +193,14 @@ export default function PostDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-indigo-100">
+    <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
       <Header />
       
       <div className="max-w-4xl mx-auto p-8">
         <div className="mb-6">
           <Link 
             href={`/user/${post.username}`}
-            className="inline-flex items-center space-x-2 text-purple-600 hover:text-purple-700 font-semibold"
+            className="inline-flex items-center space-x-2 text-rolex hover:text-rolex-dark font-semibold"
           >
             <span>←</span>
             <span>Volver al perfil</span>
@@ -260,7 +260,7 @@ export default function PostDetailPage() {
             <h3 className="text-2xl font-bold text-gray-900">Comentarios ({comments.length})</h3>
             <button
               onClick={() => setShowComments(!showComments)}
-              className="text-purple-600 hover:text-purple-700 font-semibold"
+              className="text-rolex hover:text-rolex-dark font-semibold"
             >
               {showComments ? 'Ocultar' : 'Mostrar'}
             </button>
@@ -280,13 +280,14 @@ export default function PostDetailPage() {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Escribe un comentario..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rolex resize-none"
                     rows={3}
                   />
                   <button
                     type="submit"
                     disabled={!newComment.trim()}
-                    className="mt-2 px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mt-2 px-6 py-2 text-white rounded-lg transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
                     Comentar
                   </button>
@@ -300,7 +301,7 @@ export default function PostDetailPage() {
               <p className="text-gray-600 mb-2">Inicia sesión para comentar</p>
               <Link 
                 href="/login"
-                className="text-purple-600 hover:text-purple-700 font-semibold"
+                className="text-rolex hover:text-rolex-dark font-semibold"
               >
                 Iniciar sesión
               </Link>

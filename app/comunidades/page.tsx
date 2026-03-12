@@ -89,32 +89,32 @@ const COMUNIDADES = [
 
 const getColorClasses = (color: string) => {
   const colors: Record<string, string> = {
-    purple: 'from-purple-600 to-purple-700',
-    blue: 'from-blue-600 to-blue-700',
+    purple: 'from-rolex to-rolex-light',
+    blue: 'from-rolex to-rolex-light',
     red: 'from-red-500 to-red-700',
     green: 'from-green-500 to-green-600',
     yellow: 'from-yellow-400 to-yellow-500',
     orange: 'from-orange-500 to-orange-600',
     indigo: 'from-indigo-600 to-indigo-700',
-    pink: 'from-pink-500 to-pink-600',
+    pink: 'from-rolex to-rolex-light',
     teal: 'from-teal-500 to-teal-600'
   }
-  return colors[color] || 'from-purple-600 to-blue-600'
+  return colors[color] || 'from-rolex to-rolex-light'
 }
 
 export default function ComunidadesPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-green-50 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link href="/">
-            <Button variant="ghost" className="flex items-center gap-2">
+            <Button variant="ghost" className="flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--rolex)' }}>
               <ArrowLeft className="w-5 h-5" />
               Volver
             </Button>
           </Link>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-rolex to-rolex-light bg-clip-text text-transparent">
             Comunidades
           </h1>
         </div>
@@ -124,7 +124,7 @@ export default function ComunidadesPage() {
           {COMUNIDADES.map((comunidad) => (
             <div 
               key={comunidad.id}
-              className="border-2 border-purple-200 hover:border-purple-500 transition-all duration-300 hover:shadow-xl cursor-pointer group rounded-xl bg-white p-6"
+              className="border-2 border-rolex/30 hover:border-rolex transition-all duration-300 hover:shadow-xl cursor-pointer group rounded-xl bg-white p-6"
             >
               <div className="flex items-start gap-4">
                 <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform`}>
@@ -142,7 +142,8 @@ export default function ComunidadesPage() {
                       👥 {comunidad.miembros} miembros
                     </span>
                     <Button 
-                      className={`bg-gradient-to-r ${getColorClasses(comunidad.color)} text-white hover:opacity-90`}
+                      className="text-white hover:opacity-90"
+                      style={{ backgroundColor: 'var(--rolex)' }}
                     >
                       Entrar
                     </Button>

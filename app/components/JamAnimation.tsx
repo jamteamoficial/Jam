@@ -24,7 +24,7 @@ export default function JamAnimation() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none">
       <div className="relative">
-        <h1 className="text-8xl md:text-9xl font-black bg-gradient-to-r from-purple-600 via-blue-600 to-purple-600 bg-clip-text text-transparent animate-jam-scale drop-shadow-2xl">
+        <h1 className="text-8xl md:text-9xl font-black bg-gradient-to-r from-rolex via-rolex-light to-rolex bg-clip-text text-transparent animate-jam-scale drop-shadow-2xl">
           JAM
         </h1>
       </div>
