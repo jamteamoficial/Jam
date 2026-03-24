@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import React from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Heart, Users, Music, MapPin, Mail, Instagram } from 'lucide-react'
+import { ArrowLeft, Heart, Users, Music, MapPin, Mail, Instagram, Sparkles, Radio, Play } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
@@ -24,6 +25,10 @@ interface UserProfile {
   nivelMusical: string
   instrumentos: string[]
   estilos: string[]
+  /** Referencias musicales / artistas favoritos */
+  influencias?: string[]
+  /** Ej. Disponible para tocar, Buscando banda */
+  estadoDisponibilidad?: string
   contactoWhatsapp?: string
   contactoInstagram?: string
 }
@@ -45,7 +50,9 @@ const mockProfiles: { [key: string]: UserProfile } = {
     instrumentos: ['Guitarra', 'Voz', 'Piano'],
     estilos: ['Rock', 'Pop', 'Indie'],
     contactoWhatsapp: '+56912345678',
-    contactoInstagram: '@sebamendez17'
+    contactoInstagram: '@sebamendez17',
+    influencias: ['John Mayer', 'Silvio Rodríguez', 'Mateo'],
+    estadoDisponibilidad: 'Disponible para tocar en vivo',
   },
   'Carlos Rock': {
     id: 'carlos-rock',
@@ -62,7 +69,9 @@ const mockProfiles: { [key: string]: UserProfile } = {
     instrumentos: ['Guitarra Eléctrica', 'Guitarra Acústica'],
     estilos: ['Rock', 'Metal', 'Alternativo'],
     contactoWhatsapp: '+56987654321',
-    contactoInstagram: '@carlosrock'
+    contactoInstagram: '@carlosrock',
+    influencias: ['Led Zeppelin', 'Black Sabbath', 'Soundgarden'],
+    estadoDisponibilidad: 'Buscando banda de rock alternativo',
   },
   'María Jazz': {
     id: 'maria-jazz',
@@ -644,6 +653,35 @@ export default function UsuarioProfilePage() {
                 <span className="text-rolex font-semibold">{userProfile.nivelMusical}</span>
               </div>
               <p className="text-gray-700 mb-4">{userProfile.bio}</p>
+
+              {userProfile.estadoDisponibilidad && (
+                <div className="mb-4 flex items-start gap-2 rounded-xl border border-rolex/25 bg-emerald-50/80 px-4 py-3">
+                  <Radio className="mt-0.5 h-5 w-5 shrink-0 text-[var(--rolex)]" />
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-900/70">Estado</p>
+                    <p className="font-semibold text-emerald-950">{userProfile.estadoDisponibilidad}</p>
+                  </div>
+                </div>
+              )}
+
+              {userProfile.influencias && userProfile.influencias.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 flex items-center gap-2 text-sm font-bold text-gray-800">
+                    <Sparkles className="h-4 w-4 text-[var(--rolex)]" />
+                    Influencias musicales
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {userProfile.influencias.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full border border-rolex/30 bg-white px-3 py-1 text-xs font-medium text-gray-800 shadow-sm"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {/* Botones Seguir y JAM - solo si no es el propio perfil */}
               {user?.username !== userProfile.nombreArtistico && (
@@ -743,50 +781,75 @@ export default function UsuarioProfilePage() {
           </div>
         </div>
 
-        {/* Publicaciones del Usuario */}
+        {/* Portafolio — grid de videos / posts */}
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-            <Music className="w-6 h-6 text-rolex" />
-            Publicaciones
+          <h2 className="mb-4 flex items-center gap-2 text-2xl font-bold text-gray-900">
+            <Music className="h-6 w-6 text-rolex" />
+            Portafolio
           </h2>
-          
+          <p className="mb-6 text-sm text-gray-600">
+            Videos y publicaciones de {userProfile.nombreArtistico}
+          </p>
+
           {userPosts.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-lg border-2 border-rolex/30 p-12 text-center">
-              <Music className="w-16 h-16 text-rolex/50 mx-auto mb-4" />
-              <p className="text-gray-600 text-lg">Este usuario aún no ha publicado nada</p>
+            <div className="rounded-2xl border-2 border-rolex/30 bg-white p-12 text-center shadow-lg">
+              <Music className="mx-auto mb-4 h-16 w-16 text-rolex/50" />
+              <p className="text-lg text-gray-600">Este usuario aún no ha publicado nada</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {userPosts.map((post) => (
-                <div
+                <article
                   key={post.id}
-                  className="bg-white rounded-2xl shadow-lg border-2 border-rolex/30 p-6 hover:shadow-xl transition-all"
+                  className="flex flex-col overflow-hidden rounded-2xl border-2 border-rolex/20 bg-white shadow-md transition hover:border-rolex/40 hover:shadow-lg"
                 >
-                  <div className="flex items-center mb-4">
-                    <div className="w-12 h-12 rounded-full bg-rolex flex items-center justify-center text-2xl mr-3">
-                      {post.avatar}
+                  <Link href={`/post/${post.id}`} className="relative block aspect-video bg-gradient-to-br from-emerald-900/20 to-teal-900/20">
+                    {post.thumbnail_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={post.thumbnail_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    ) : post.video_url ? (
+                      <div className="flex h-full w-full items-center justify-center bg-black/40">
+                        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-[var(--rolex)] shadow-lg">
+                          <Play className="ml-1 h-7 w-7 fill-current" />
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-500">
+                        {post.texto?.slice(0, 80)}
+                        {post.texto && post.texto.length > 80 ? '…' : ''}
+                      </div>
+                    )}
+                    {post.video_url && (
+                      <span className="absolute bottom-2 right-2 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase text-white">
+                        Video
+                      </span>
+                    )}
+                  </Link>
+                  <div className="flex flex-1 flex-col p-4">
+                    <p className="line-clamp-2 text-sm text-gray-800">{post.texto}</p>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
+                      <span>{post.instrumento}</span>
+                      {post.estado && (
+                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-800">{post.estado}</span>
+                      )}
                     </div>
-                    <div>
-                      <h3 className="font-bold text-lg text-gray-900">{post.usuario}</h3>
-                      <p className="text-sm text-rolex">{post.instrumento}</p>
+                    <div className="mt-4 space-y-2">
+                      <PostActions postId={post.id} usuario={post.usuario} />
+                      <Button
+                        onClick={() => handleJam(post.id, post.usuario)}
+                        className="w-full font-bold text-white hover:opacity-90"
+                        style={{ backgroundColor: 'var(--rolex)' }}
+                      >
+                        <Music className="mr-2 h-4 w-4" />
+                        JAM
+                      </Button>
                     </div>
                   </div>
-                  <p className="text-gray-700 mb-4">{post.texto}</p>
-                  
-                  {/* Botones de interacción */}
-                  <div className="mb-4">
-                    <PostActions postId={post.id} usuario={post.usuario} />
-                  </div>
-
-                  <Button
-                    onClick={() => handleJam(post.id, post.usuario)}
-                    className="w-full text-white font-bold py-3 rounded-xl hover:opacity-90"
-                    style={{ backgroundColor: 'var(--rolex)' }}
-                  >
-                    <Music className="w-4 h-4 mr-2" />
-                    JAM
-                  </Button>
-                </div>
+                </article>
               ))}
             </div>
           )}

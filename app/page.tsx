@@ -1,23 +1,52 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
-import { Music } from 'lucide-react'
+import { Music, Video, PlusCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import Link from 'next/link'
 import ChatsPanel from './components/ChatsPanel'
 import ComunidadPanel from './components/ComunidadPanel'
-import PostActions from './components/PostActions'
+import WelcomeBanner from './components/WelcomeBanner'
+import FeedToolbar from './components/FeedToolbar'
+import FeedVideoCard from './components/FeedVideoCard'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from './data/mockPosts'
+import { filterFeedPosts } from '@/src/lib/feedFilters'
 
 export default function Home() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<'chats' | 'feed' | 'comunidad'>('feed')
   const [activeFeed, setActiveFeed] = useState<'general' | 'descubrir' | 'conectar' | 'aprender'>('general')
   const [currentPosts, setCurrentPosts] = useState<MockPost[]>(GENERAL_POSTS)
   const [chatsPanelVisible, setChatsPanelVisible] = useState(true)
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterInstrument, setFilterInstrument] = useState('Todos')
+  const [filterCiudad, setFilterCiudad] = useState('')
+  const [filterEstado, setFilterEstado] = useState('Todos')
+
+  const filteredPosts = useMemo(
+    () =>
+      filterFeedPosts(currentPosts, {
+        searchQuery,
+        instrument: filterInstrument,
+        ciudad: filterCiudad,
+        estado: filterEstado,
+      }),
+    [currentPosts, searchQuery, filterInstrument, filterCiudad, filterEstado]
+  )
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setFilterInstrument('Todos')
+    setFilterCiudad('')
+    setFilterEstado('Todos')
+  }
+
+  const openCreateModal = () => {
+    window.dispatchEvent(new CustomEvent('openCreateModal'))
+  }
 
   // Escuchar evento para toggle del panel de chats
   useEffect(() => {
@@ -117,22 +146,13 @@ export default function Home() {
   }
 
 
-  const getGradientClass = (index: number) => {
-    const gradients = [
-      'bg-gradient-to-br from-green-100 to-emerald-100',
-      'bg-gradient-to-br from-blue-100 to-cyan-100',
-      'bg-gradient-to-br from-green-100 to-emerald-100',
-      'bg-gradient-to-br from-yellow-100 to-orange-100',
-      'bg-gradient-to-br from-emerald-100 to-green-100',
-      'bg-gradient-to-br from-pink-100 to-rose-100',
-      'bg-gradient-to-br from-amber-100 to-yellow-100',
-      'bg-gradient-to-br from-teal-100 to-green-100'
-    ]
-    return gradients[index % gradients.length]
-  }
-
   return (
-    <div className="relative w-full bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+    <>
+      {!isAuthenticated && <WelcomeBanner />}
+      <div
+        id="feed-main"
+        className="relative w-full bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50"
+      >
       {/* Tabs móvil - Solo visible en pantallas pequeñas */}
       <div className="md:hidden sticky top-16 z-40 bg-white border-b-2 border-rolex/30">
         <div className="flex">
@@ -201,8 +221,7 @@ export default function Home() {
 
         {/* FEED centro - ajusta ancho según si el panel está visible */}
         <div className={`overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex flex-col transition-all duration-300 ${chatsPanelVisible ? 'w-1/2' : 'w-1/3'}`}>
-          {/* Barra de Tabs */}
-          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b-2 border-rolex/30">
+          <div className="sticky top-0 z-10 border-b-2 border-rolex/30 bg-white/95 shadow-sm backdrop-blur-sm">
             <div className="flex">
               <button
                 onClick={() => setActiveFeed('general')}
@@ -245,72 +264,61 @@ export default function Home() {
                 Aprender
               </button>
             </div>
-          </div>
-
-          {/* Contenido del Feed */}
-          <div className="p-8 space-y-6 flex-1">
-            {currentPosts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-96 text-center">
-              <Music className="w-20 h-20 text-rolex/50 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay publicaciones aún</h2>
-              <p className="text-gray-600 mb-6">Sé el primero en compartir</p>
-            </div>
-          ) : (
-            currentPosts.map((post, index) => {
-              console.log('Post renderizado:', post)
-              return (
-              <div
-                key={post.id}
-                className="bg-white border-2 border-rolex/30 rounded-xl p-6 hover:shadow-lg transition-all"
-              >
-                <div className="flex items-center mb-4">
-                  <Link href={`/usuario/${post.usuario}`} className="w-16 h-16 rounded-full bg-rolex flex items-center justify-center text-3xl mr-4 flex-shrink-0 hover:scale-110 transition-transform cursor-pointer">
-                    {post.avatar}
-                  </Link>
-                  <div>
-                    <Link href={`/usuario/${post.usuario}`} className="hover:underline">
-                      <h3 className="font-bold text-xl text-gray-900">{post.usuario}</h3>
-                    </Link>
-                    <p className="text-rolex font-semibold">{post.instrumento}</p>
-                  </div>
-                </div>
-                {post.texto && (
-                  <p className="mt-2 text-gray-600 mb-4">{post.texto}</p>
-                )}
-                
-                {/* Mostrar video si existe */}
-                {(post as any).video_url && (
-                  <div className="mb-4 rounded-xl overflow-hidden w-full">
-                    <video
-                      src={(post as any).video_url}
-                      controls
-                      muted
-                      playsInline
-                      preload="metadata"
-                      className="w-full rounded-xl"
-                    >
-                      Tu navegador no soporta la reproducción de video.
-                    </video>
-                  </div>
-                )}
-                
-                {/* Botones de interacción */}
-                <div className="mb-4">
-                  <PostActions postId={post.id} usuario={post.usuario} />
-                </div>
-
+            <FeedToolbar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              instrument={filterInstrument}
+              onInstrumentChange={setFilterInstrument}
+              ciudad={filterCiudad}
+              onCiudadChange={setFilterCiudad}
+              estado={filterEstado}
+              onEstadoChange={setFilterEstado}
+              onClearFilters={clearFilters}
+            />
+            {isAuthenticated && (
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rolex/10 px-4 py-3">
+                <p className="text-sm font-medium text-gray-600">
+                  <span className="font-bold" style={{ color: 'var(--rolex)' }}>
+                    Nueva publicación
+                  </span>{' '}
+                  — comparte un video o mensaje con la comunidad.
+                </p>
                 <Button
-                  onClick={() => handleJam(post.id, post.usuario)}
-                  className="w-full text-white font-bold py-3 rounded-xl hover:opacity-90"
+                  type="button"
+                  onClick={openCreateModal}
+                  className="gap-2 font-bold text-white shadow-md"
                   style={{ backgroundColor: 'var(--rolex)' }}
                 >
-                  <Music className="w-4 h-4 mr-2" />
-                  JAM
+                  <Video className="h-4 w-4" />
+                  Subir video / publicar
                 </Button>
               </div>
-              )
-            })
-          )}
+            )}
+          </div>
+
+          <div className="flex-1 space-y-6 p-6 md:p-8">
+            {filteredPosts.length === 0 ? (
+              <div className="flex h-96 flex-col items-center justify-center text-center">
+                <Music className="mb-4 h-20 w-20 text-rolex/50" />
+                <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                  {currentPosts.length === 0 ? 'No hay publicaciones aún' : 'Nada coincide con tu búsqueda'}
+                </h2>
+                <p className="mb-6 text-gray-600">
+                  {currentPosts.length === 0
+                    ? 'Sé el primero en compartir'
+                    : 'Prueba otros filtros o limpia la búsqueda'}
+                </p>
+                {currentPosts.length > 0 && filteredPosts.length === 0 && (
+                  <Button variant="outline" onClick={clearFilters} style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}>
+                    Limpiar filtros
+                  </Button>
+                )}
+              </div>
+            ) : (
+              filteredPosts.map((post) => (
+                <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
+              ))
+            )}
           </div>
         </div>
 
@@ -328,76 +336,49 @@ export default function Home() {
           </div>
         )}
         {activeTab === 'feed' && (
-          <div className="h-[calc(100vh-8rem)] overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-4">
-            {currentPosts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-96 text-center">
-                <Music className="w-20 h-20 text-rolex/50 mb-4" />
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay publicaciones aún</h2>
-                <p className="text-gray-600 mb-6">Sé el primero en compartir</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {currentPosts.map((post, index) => (
-                  <div
-                    key={post.id}
-                    className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-rolex/20 hover:border-rolex/40 transition-all hover:shadow-xl p-6"
+          <div className="h-[calc(100vh-8rem)] overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+            <div className="sticky top-0 z-10 border-b-2 border-rolex/30 bg-white/95 backdrop-blur-sm">
+              <FeedToolbar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                instrument={filterInstrument}
+                onInstrumentChange={setFilterInstrument}
+                ciudad={filterCiudad}
+                onCiudadChange={setFilterCiudad}
+                estado={filterEstado}
+                onEstadoChange={setFilterEstado}
+                onClearFilters={clearFilters}
+              />
+              {isAuthenticated && (
+                <div className="flex items-center justify-between gap-2 border-t border-rolex/10 px-3 py-1.5">
+                  <Button
+                    type="button"
+                    onClick={openCreateModal}
+                    className="flex-1 gap-2 py-3 text-sm font-bold text-white"
+                    style={{ backgroundColor: 'var(--rolex)' }}
                   >
-                    <div className="flex items-start gap-4 mb-4">
-                      <Link href={`/usuario/${post.usuario}`} className="w-16 h-16 rounded-full bg-rolex flex items-center justify-center text-3xl flex-shrink-0 hover:scale-110 transition-transform cursor-pointer">
-                        {post.avatar}
-                      </Link>
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/usuario/${post.usuario}`} className="hover:underline">
-                          <h3 className="text-xl font-bold text-gray-900 mb-1">
-                            {post.usuario}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-rolex font-semibold">
-                          {post.instrumento}
-                        </p>
-                      </div>
-                    </div>
-                    {post.texto && (
-                      <div className="mb-4">
-                        <p className="text-gray-700 leading-relaxed line-clamp-3">
-                          {post.texto}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Mostrar video si existe (móvil) */}
-                    {(post as any).video_url && (
-                      <div className="mb-4 rounded-xl overflow-hidden w-full">
-                        <video
-                          src={(post as any).video_url}
-                          controls
-                          muted
-                          playsInline
-                          preload="metadata"
-                          className="w-full rounded-xl"
-                        >
-                          Tu navegador no soporta la reproducción de video.
-                        </video>
-                      </div>
-                    )}
-
-                    {/* Botones de interacción */}
-                    <div className="mb-4">
-                      <PostActions postId={post.id} usuario={post.usuario} />
-                    </div>
-
-                    <Button
-                      onClick={() => handleJam(post.id, post.usuario)}
-                      className="w-full text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-105 hover:opacity-90"
-                      style={{ backgroundColor: 'var(--rolex)' }}
-                    >
-                      <Music className="w-4 h-4 mr-2" />
-                      JAM
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
+                    <PlusCircle className="h-4 w-4" />
+                    Nueva publicación
+                  </Button>
+                </div>
+              )}
+            </div>
+            <div className="space-y-4 p-4">
+              {filteredPosts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Music className="mb-4 h-16 w-16 text-rolex/50" />
+                  <p className="text-gray-600">
+                    {currentPosts.length === 0
+                      ? 'No hay publicaciones aún'
+                      : 'Nada coincide con tu búsqueda'}
+                  </p>
+                </div>
+              ) : (
+                filteredPosts.map((post) => (
+                  <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
+                ))
+              )}
+            </div>
           </div>
         )}
         {activeTab === 'comunidad' && (
@@ -407,18 +388,18 @@ export default function Home() {
         )}
       </div>
 
-      {/* Botón flotante Crear Publicación */}
-      <button
-        onClick={() => {
-          const event = new CustomEvent('openCreateModal')
-          window.dispatchEvent(event)
-        }}
-        className="fixed bottom-8 right-8 w-20 h-20 bg-rolex hover:bg-rolex-dark text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 z-50"
-        aria-label="Crear publicación"
-      >
-        +
-      </button>
+      {isAuthenticated && (
+        <button
+          type="button"
+          onClick={openCreateModal}
+          className="fixed bottom-8 right-8 z-50 flex h-16 w-16 items-center justify-center rounded-full text-3xl font-bold text-white shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 md:h-20 md:w-20 md:text-4xl"
+          style={{ backgroundColor: 'var(--rolex)' }}
+          aria-label="Crear publicación"
+        >
+          +
+        </button>
+      )}
     </div>
+    </>
   )
 }
-// forzando rebuild vercel

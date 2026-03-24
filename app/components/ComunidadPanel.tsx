@@ -1,9 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Plus } from 'lucide-react'
+import { Users, Plus, MessageCircle, LogIn } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import CreateComunidadModal from './CreateComunidadModal'
 
 interface Comunidad {
@@ -16,109 +15,110 @@ interface Comunidad {
 }
 
 const COMUNIDADES: Comunidad[] = [
-  { 
+  {
     id: 'audiciones',
-    nombre: 'Audiciones', 
-    icono: '🎤', 
-    descripcion: 'Encuentra audiciones y oportunidades para músicos', 
+    nombre: 'Audiciones',
+    icono: '🎤',
+    descripcion: 'Encuentra audiciones y oportunidades para músicos',
     color: 'purple',
-    miembros: '1.2k'
+    miembros: '1.2k',
   },
-  { 
+  {
     id: 'clases',
-    nombre: 'Aprender Música', 
-    icono: '🎓', 
-    descripcion: 'Clases, tutoriales y aprendizaje musical', 
+    nombre: 'Aprender Música',
+    icono: '🎓',
+    descripcion: 'Clases, tutoriales y aprendizaje musical',
     color: 'blue',
-    miembros: '2.5k'
+    miembros: '2.5k',
   },
-  { 
+  {
     id: 'rock',
-    nombre: 'Rock & Bandas', 
-    icono: '🎸', 
-    descripcion: 'Para bandas de rock y músicos del género', 
+    nombre: 'Rock & Bandas',
+    icono: '🎸',
+    descripcion: 'Para bandas de rock y músicos del género',
     color: 'red',
-    miembros: '3.1k'
+    miembros: '3.1k',
   },
-  { 
+  {
     id: 'emergentes',
-    nombre: 'Bandas Emergentes', 
-    icono: '🚀', 
-    descripcion: 'Bandas nuevas buscando crecer y conectar', 
+    nombre: 'Bandas Emergentes',
+    icono: '🚀',
+    descripcion: 'Bandas nuevas buscando crecer y conectar',
     color: 'green',
-    miembros: '1.8k'
+    miembros: '1.8k',
   },
-  { 
+  {
     id: 'productores',
-    nombre: 'Productores & Beats', 
-    icono: '🎧', 
-    descripcion: 'Productores y creadores de beats', 
+    nombre: 'Productores & Beats',
+    icono: '🎧',
+    descripcion: 'Productores y creadores de beats',
     color: 'yellow',
-    miembros: '2.2k'
+    miembros: '2.2k',
   },
-  { 
+  {
     id: 'jams',
-    nombre: 'Jams & Sesiones', 
-    icono: '🥁', 
-    descripcion: 'Jams en vivo y sesiones improvisadas', 
+    nombre: 'Jams & Sesiones',
+    icono: '🥁',
+    descripcion: 'Jams en vivo y sesiones improvisadas',
     color: 'orange',
-    miembros: '1.5k'
+    miembros: '1.5k',
   },
-  { 
+  {
     id: 'jazz',
-    nombre: 'Jazz & Blues', 
-    icono: '🎹', 
-    descripcion: 'Comunidad de jazz, blues y música clásica', 
+    nombre: 'Jazz & Blues',
+    icono: '🎹',
+    descripcion: 'Comunidad de jazz, blues y música clásica',
     color: 'indigo',
-    miembros: '890'
+    miembros: '890',
   },
-  { 
+  {
     id: 'electronica',
-    nombre: 'Música Electrónica', 
-    icono: '⚡', 
-    descripcion: 'DJs, productores y amantes de la electrónica', 
+    nombre: 'Música Electrónica',
+    icono: '⚡',
+    descripcion: 'DJs, productores y amantes de la electrónica',
     color: 'pink',
-    miembros: '1.9k'
+    miembros: '1.9k',
   },
-  { 
+  {
     id: 'folk',
-    nombre: 'Folk & Acústico', 
-    icono: '🎻', 
-    descripcion: 'Música acústica, folk y sonidos orgánicos', 
+    nombre: 'Folk & Acústico',
+    icono: '🎻',
+    descripcion: 'Música acústica, folk y sonidos orgánicos',
     color: 'teal',
-    miembros: '1.1k'
+    miembros: '1.1k',
   },
-  { 
+  {
     id: 'hiphop',
-    nombre: 'Hip-Hop & Rap', 
-    icono: '🎤', 
-    descripcion: 'Rappers, MCs y productores de hip-hop', 
+    nombre: 'Hip-Hop & Rap',
+    icono: '🎤',
+    descripcion: 'Rappers, MCs y productores de hip-hop',
     color: 'purple',
-    miembros: '2.3k'
-  }
+    miembros: '2.3k',
+  },
 ]
 
-const getColorClasses = (color: string) => {
-  const colors: Record<string, string> = {
-    purple: 'from-rolex to-rolex-light',
-    blue: 'from-rolex to-rolex-light',
-    red: 'from-red-500 to-red-700',
-    green: 'from-green-500 to-green-600',
-    yellow: 'from-yellow-400 to-yellow-500',
-    orange: 'from-orange-500 to-orange-600',
-    indigo: 'from-rolex to-rolex-light',
-    pink: 'from-rolex to-rolex-light',
-    teal: 'from-teal-500 to-teal-600'
+const getIconGradient = (color: string) => {
+  const map: Record<string, string> = {
+    purple: 'from-violet-600 to-purple-900',
+    blue: 'from-sky-600 to-blue-900',
+    red: 'from-red-600 to-rose-900',
+    green: 'from-emerald-600 to-green-900',
+    yellow: 'from-amber-500 to-yellow-700',
+    orange: 'from-orange-500 to-red-800',
+    indigo: 'from-indigo-500 to-slate-900',
+    pink: 'from-pink-500 to-fuchsia-900',
+    teal: 'from-teal-500 to-cyan-900',
   }
-  return colors[color] || 'from-rolex to-rolex-light'
+  return map[color] || 'from-emerald-600 to-green-900'
 }
 
 export default function ComunidadPanel() {
   const router = useRouter()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userComunidades, setUserComunidades] = useState<Comunidad[]>([])
+  /** Simula membresía por id de comunidad (para demo / hasta conectar con Supabase) */
+  const [miembroDe, setMiembroDe] = useState<Record<string, boolean>>({})
 
-  // Cargar comunidades creadas por el usuario
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('userComunidades')
@@ -126,102 +126,161 @@ export default function ComunidadPanel() {
         try {
           const parsed = JSON.parse(saved)
           setUserComunidades(parsed)
-        } catch (error) {
-          console.error('Error al cargar comunidades:', error)
+        } catch {
+          console.error('Error al cargar comunidades')
+        }
+      }
+      const memb = localStorage.getItem('jam_comunidad_miembros_mock')
+      if (memb) {
+        try {
+          setMiembroDe(JSON.parse(memb))
+        } catch {
+          /* ignore */
         }
       }
     }
   }, [])
 
-  // Escuchar cuando se crea una nueva comunidad
   useEffect(() => {
     const handleStorageChange = () => {
       const saved = localStorage.getItem('userComunidades')
       if (saved) {
         try {
-          const parsed = JSON.parse(saved)
-          setUserComunidades(parsed)
-        } catch (error) {
-          console.error('Error al cargar comunidades:', error)
+          setUserComunidades(JSON.parse(saved))
+        } catch {
+          /* ignore */
         }
       }
     }
-
     window.addEventListener('storage', handleStorageChange)
-    // También escuchar eventos personalizados
     window.addEventListener('comunidadCreated', handleStorageChange)
-    
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       window.removeEventListener('comunidadCreated', handleStorageChange)
     }
   }, [])
 
-  const handleComunidadClick = (comunidadId: string) => {
-    router.push(`/comunidad/${comunidadId}`)
+  const persistMembresia = (next: Record<string, boolean>) => {
+    setMiembroDe(next)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('jam_comunidad_miembros_mock', JSON.stringify(next))
+    }
   }
 
-  // Combinar comunidades por defecto con las creadas por el usuario
+  const setMembresia = (id: string, value: boolean) => {
+    setMiembroDe((prev) => {
+      const next = { ...prev, [id]: value }
+      persistMembresia(next)
+      return next
+    })
+  }
+
+  /** Demo: unirse con un clic; si ya eres miembro, el mismo botón abre el chat */
+  const handlePrimaryAction = (comunidadId: string) => {
+    const soyMiembro = miembroDe[comunidadId]
+    if (soyMiembro) {
+      router.push(`/comunidad/${comunidadId}/chat`)
+    } else {
+      setMembresia(comunidadId, true)
+    }
+  }
+
   const allComunidades = [...userComunidades, ...COMUNIDADES]
 
   return (
     <>
-      <div className="h-full bg-white border-l-2 border-rolex/30 overflow-y-auto">
+      <div className="h-full overflow-y-auto border-l border-emerald-900/40 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
         <div className="p-4">
-          <div className="flex items-center justify-between gap-2 mb-4">
+          <div className="mb-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-rolex" />
-              <h2 className="text-xl font-bold bg-gradient-to-r from-rolex to-rolex-light bg-clip-text text-transparent">
-                Comunidades
-              </h2>
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600/20 ring-1 ring-emerald-500/40">
+                <Users className="h-4 w-4 text-emerald-400" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold tracking-tight text-white">Comunidades</h2>
+                <p className="text-[10px] text-emerald-200/60">Explora por género y estilo</p>
+              </div>
             </div>
             <button
+              type="button"
               onClick={() => setShowCreateModal(true)}
-              className="px-3 py-1.5 text-sm font-semibold rounded-lg text-white transition-all flex items-center gap-1.5 hover:opacity-90"
+              className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white shadow-md transition hover:opacity-90"
               style={{ backgroundColor: 'var(--rolex)' }}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="h-3.5 w-3.5" />
               Crear
             </button>
           </div>
 
           <div className="space-y-3">
-            {allComunidades.map((comunidad) => (
-              <div
-                key={comunidad.id}
-                className="p-4 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-rolex/30 hover:border-rolex/50 transition-all hover:shadow-lg group"
-              >
-                <div className="flex items-start gap-3 mb-2">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
-                    {comunidad.icono}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 mb-1 truncate">{comunidad.nombre}</h3>
-                    <p className="text-xs text-gray-600 mb-2 line-clamp-2">{comunidad.descripcion}</p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <Users className="w-3 h-3" />
-                      <span>{comunidad.miembros} miembros</span>
+            {allComunidades.map((comunidad) => {
+              const soyMiembro = !!miembroDe[comunidad.id]
+              return (
+                <div
+                  key={comunidad.id}
+                  className="rounded-xl border border-emerald-800/30 bg-slate-800/50 p-4 shadow-lg ring-1 ring-slate-700/50 transition hover:border-emerald-600/40 hover:bg-slate-800/80"
+                >
+                  <div className="mb-3 flex items-start gap-3">
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-2xl shadow-lg ${getIconGradient(comunidad.color)}`}
+                    >
+                      {comunidad.icono}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="mb-1 truncate font-bold text-white">{comunidad.nombre}</h3>
+                      <p className="mb-2 line-clamp-2 text-xs leading-relaxed text-slate-400">
+                        {comunidad.descripcion}
+                      </p>
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                        <Users className="h-3.5 w-3.5 shrink-0 text-emerald-500/80" />
+                        <span>{comunidad.miembros} miembros</span>
+                      </div>
                     </div>
                   </div>
+
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handlePrimaryAction(comunidad.id)}
+                      className={`w-full rounded-lg px-3 py-2.5 text-sm font-bold transition ${
+                        soyMiembro
+                          ? 'border-2 border-emerald-500/50 bg-slate-900/80 text-emerald-300 hover:bg-slate-800'
+                          : 'text-white shadow-md shadow-emerald-900/30 hover:opacity-95'
+                      }`}
+                      style={soyMiembro ? undefined : { backgroundColor: 'var(--rolex)' }}
+                    >
+                      {soyMiembro ? (
+                        <span className="inline-flex items-center justify-center gap-2">
+                          <MessageCircle className="h-4 w-4" />
+                          Ingresar al Chat
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center justify-center gap-2">
+                          <LogIn className="h-4 w-4" />
+                          Unirse a la Comunidad
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/comunidad/${comunidad.id}`)}
+                      className="w-full rounded-lg border border-slate-600 py-2 text-xs font-semibold text-slate-300 transition hover:bg-slate-700/50"
+                    >
+                      Ver detalle
+                    </button>
+                    {soyMiembro && (
+                      <button
+                        type="button"
+                        onClick={() => setMembresia(comunidad.id, false)}
+                        className="w-full text-center text-[10px] font-medium text-slate-500 underline-offset-2 hover:text-slate-400 hover:underline"
+                      >
+                        Dejar comunidad (demo)
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex gap-2 mt-2">
-                  <button
-                    onClick={() => handleComunidadClick(comunidad.id)}
-                    className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg text-white transition-colors hover:opacity-90"
-                    style={{ backgroundColor: 'var(--rolex)' }}
-                  >
-                    Ver Comunidad
-                  </button>
-                  <Link
-                    href={`/comunidad/${comunidad.id}/chat`}
-                    className="flex-1 px-3 py-2 text-sm font-semibold rounded-lg text-white transition-colors text-center hover:opacity-90"
-                    style={{ backgroundColor: 'var(--rolex)' }}
-                  >
-                    Chat
-                  </Link>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       </div>
@@ -229,4 +288,3 @@ export default function ComunidadPanel() {
     </>
   )
 }
-

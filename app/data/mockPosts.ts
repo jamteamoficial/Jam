@@ -10,6 +10,12 @@ export interface MockPost {
   avatar: string
   tipo?: string
   feedType?: 'general' | 'descubrir' | 'conectar' | 'aprender'
+  /** URL de video (p. ej. Supabase o demo) */
+  video_url?: string
+  /** Miniatura antes de reproducir */
+  thumbnail_url?: string
+  /** Estado para filtros (buscando banda, jam, etc.) */
+  estado?: string
 }
 
 // Feed GENERAL - Todos los videos y publicaciones
@@ -23,7 +29,11 @@ export const GENERAL_POSTS: MockPost[] = [
     texto: 'Mira mi nuevo video cover de "Entre Caníbales" 🎸',
     avatar: '🎵',
     tipo: 'video',
-    feedType: 'general'
+    feedType: 'general',
+    video_url: 'https://www.w3schools.com/html/mov_bbb.mp4',
+    thumbnail_url:
+      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&q=80&auto=format&fit=crop',
+    estado: 'Disponible para tocar',
   },
   {
     id: 'g2',
@@ -34,7 +44,11 @@ export const GENERAL_POSTS: MockPost[] = [
     texto: 'Nuevo video tocando "Stairway to Heaven" en vivo 🎸',
     avatar: '🎸',
     tipo: 'video',
-    feedType: 'general'
+    feedType: 'general',
+    video_url: 'https://www.w3schools.com/html/mov_bbb.mp4',
+    thumbnail_url:
+      'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200&q=80&auto=format&fit=crop',
+    estado: 'Buscando banda',
   },
   {
     id: 'g3',
@@ -45,7 +59,8 @@ export const GENERAL_POSTS: MockPost[] = [
     texto: 'Comparto mi última composición de jazz en video 🎹',
     avatar: '🎹',
     tipo: 'video',
-    feedType: 'general'
+    feedType: 'general',
+    estado: 'Buscando Jam',
   },
   {
     id: 'g4',
@@ -56,7 +71,8 @@ export const GENERAL_POSTS: MockPost[] = [
     texto: 'Video del proceso de producción de mi último track 🎧',
     avatar: '🎧',
     tipo: 'video',
-    feedType: 'general'
+    feedType: 'general',
+    estado: 'En proyecto',
   },
   {
     id: 'g5',
@@ -67,7 +83,8 @@ export const GENERAL_POSTS: MockPost[] = [
     texto: 'Video jamming con mi bajo, disfruten el groove! 🎸',
     avatar: '🎸',
     tipo: 'video',
-    feedType: 'general'
+    feedType: 'general',
+    estado: 'Disponible para tocar',
   },
   {
     id: 'g6',
@@ -78,7 +95,8 @@ export const GENERAL_POSTS: MockPost[] = [
     texto: 'Video acústico de mi nueva canción original 🎤',
     avatar: '🎤',
     tipo: 'video',
-    feedType: 'general'
+    feedType: 'general',
+    estado: 'Buscando banda',
   }
 ]
 
