@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -31,10 +31,12 @@ const ESTILOS_MUSICALES = [
   'Funk', 'Soul', 'R&B', 'Country', 'Folk', 'Clásica', 'Metal', 'Punk', 'Indie', 'Otro'
 ]
 
-export default function PerfilPage() {
+function PerfilContent() {
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isOnboarding = searchParams.get('onboarding') === '1'
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<ProfileData>({
     nombreCompleto: '',
@@ -112,6 +114,15 @@ export default function PerfilPage() {
       return
     }
 
+    if (isOnboarding && !formData.ciudad.trim()) {
+      toast({
+        title: "Campo requerido",
+        description: "Indica tu ciudad para continuar",
+        variant: "destructive"
+      })
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -125,7 +136,7 @@ export default function PerfilPage() {
       })
 
       setLoading(false)
-      router.push('/')
+      router.replace('/')
     } catch (error) {
       console.error('Error al guardar perfil:', error)
       toast({
@@ -153,19 +164,55 @@ export default function PerfilPage() {
     )
   }
 
+  const needsInstruments = !isOnboarding
+  const canSave =
+    formData.nombreCompleto.trim() &&
+    formData.ciudad.trim() &&
+    (!needsInstruments || formData.instrumentos.length > 0)
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
+        {isOnboarding && (
+          <div
+            className="mb-6 rounded-xl border-2 border-rolex/40 bg-white p-4 shadow-md"
+            role="status"
+          >
+            <p className="font-semibold text-gray-900">Completa tu perfil</p>
+            <p className="mt-1 text-sm text-gray-600">
+              Es tu primera vez en JAM. Rellena al menos tu nombre, ciudad y guarda para entrar al inicio.
+            </p>
+          </div>
+        )}
+
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/">
-            <Button variant="ghost" className="flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--rolex)' }}>
+        <div className="flex flex-wrap items-center gap-4 mb-8">
+          {isOnboarding ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="flex items-center gap-2 opacity-60"
+              style={{ color: 'var(--rolex)' }}
+              onClick={() =>
+                toast({
+                  title: 'Primero completa tu perfil',
+                  description: 'Guarda los datos obligatorios y podrás ir al inicio.',
+                })
+              }
+            >
               <ArrowLeft className="w-5 h-5" />
               Volver
             </Button>
-          </Link>
+          ) : (
+            <Link href="/">
+              <Button variant="ghost" className="flex items-center gap-2 hover:opacity-80" style={{ color: 'var(--rolex)' }}>
+                <ArrowLeft className="w-5 h-5" />
+                Volver
+              </Button>
+            </Link>
+          )}
           <h1 className="text-4xl font-bold bg-rolex bg-clip-text text-transparent">
-            Mi Perfil
+            {isOnboarding ? 'Crea tu perfil' : 'Mi Perfil'}
           </h1>
         </div>
 
@@ -190,12 +237,13 @@ export default function PerfilPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Ciudad *
+                Ciudad *{isOnboarding && ' (obligatorio)'}
               </label>
               <input
                 type="text"
                 value={formData.ciudad}
                 onChange={(e) => handleInputChange('ciudad', e.target.value)}
+                required={isOnboarding}
                 className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="Santiago"
                 required
@@ -349,12 +397,12 @@ export default function PerfilPage() {
           <div className="pt-4">
             <Button
               type="submit"
-              disabled={loading || !formData.nombreCompleto.trim() || formData.instrumentos.length === 0}
+              disabled={loading || !canSave}
               className="w-full text-white font-bold py-6 text-lg rounded-xl shadow-lg transition-all hover:scale-105 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ backgroundColor: 'var(--rolex)' }}
             >
               <Save className="w-5 h-5 mr-2" />
-              {loading ? 'Guardando...' : 'Guardar Perfil'}
+              {loading ? 'Guardando...' : isOnboarding ? 'Guardar y continuar' : 'Guardar Perfil'}
             </Button>
           </div>
         </form>
@@ -363,5 +411,17 @@ export default function PerfilPage() {
   )
 }
 
-
+export default function PerfilPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 text-gray-600">
+          Cargando perfil…
+        </div>
+      }
+    >
+      <PerfilContent />
+    </Suspense>
+  )
+}
 

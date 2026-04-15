@@ -106,7 +106,7 @@ export default function LoginModal({ isOpen, onClose }: LoginModalProps) {
               <Button
                 onClick={handleLogin}
                 disabled={loading}
-                className="w-full bg-rolex hover:bg-rolex-dark text-white font-bold py-3 rounded-lg shadow-lg"
+                className="w-full bg-rolex hover:bg-rolex-light text-white font-bold py-3 rounded-lg shadow-lg"
               >
                 {loading ? 'Iniciando...' : 'Entrar a JAM'}
               </Button>

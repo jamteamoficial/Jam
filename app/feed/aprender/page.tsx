@@ -131,7 +131,7 @@ export default function AprenderFeed() {
                   <div className="flex items-center gap-3">
                     <Button
                       onClick={() => handleJam(post.id, post.usuario)}
-                      className="flex-1 bg-rolex hover:bg-rolex-dark text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-105"
+                      className="flex-1 bg-rolex hover:bg-rolex-light text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-105"
                     >
                       <Music className="w-4 h-4 mr-2" />
                       JAM
@@ -156,7 +156,7 @@ export default function AprenderFeed() {
           const event = new CustomEvent('openCreateModal')
           window.dispatchEvent(event)
         }}
-        className="fixed bottom-8 right-8 w-20 h-20 bg-rolex hover:bg-rolex-dark text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 z-50"
+        className="fixed bottom-8 right-8 w-20 h-20 bg-rolex hover:bg-rolex-light text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 z-50"
         aria-label="Crear publicación"
       >
         +

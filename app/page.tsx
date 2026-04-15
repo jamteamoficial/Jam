@@ -4,11 +4,10 @@ import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useAuth } from './context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
-import { Music, Video, PlusCircle, MessageCircle, Users, Inbox, Check, XCircle, MapPin } from 'lucide-react'
+import { Music, Video, MessageCircle, Users, Inbox, Check, XCircle, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ChatsPanel from './components/ChatsPanel'
 import ComunidadPanel from './components/ComunidadPanel'
-import WelcomeBanner from './components/WelcomeBanner'
 import FeedToolbar from './components/FeedToolbar'
 import FeedVideoCard from './components/FeedVideoCard'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from './data/mockPosts'
@@ -218,10 +217,9 @@ export default function Home() {
 
   return (
     <>
-      {!isAuthenticated && <WelcomeBanner />}
       <div
         id="feed-main"
-        className="relative w-full bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50"
+        className="relative w-full bg-gradient-to-br from-slate-50 via-zinc-100 to-gray-100"
       >
       {/* Tabs móvil - Solo visible en pantallas pequeñas */}
       <div className="md:hidden sticky top-16 z-40 bg-white border-b-2 border-rolex/30">
@@ -331,7 +329,7 @@ export default function Home() {
         </aside>
 
         {/* FEED central - único scroll vertical */}
-        <main className="overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <main className="overflow-y-auto bg-gradient-to-br from-slate-50 via-zinc-100 to-gray-100">
           {desktopSideView === 'feed' && (
             <>
               <div className="sticky top-0 z-10 border-b-2 border-rolex/30 bg-white/95 shadow-sm backdrop-blur-sm">
@@ -346,25 +344,6 @@ export default function Home() {
                   onEstadoChange={setFilterEstado}
                   onClearFilters={clearFilters}
                 />
-                {isAuthenticated && (
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rolex/10 px-4 py-3">
-                    <p className="text-sm font-medium text-gray-600">
-                      <span className="font-bold" style={{ color: 'var(--rolex)' }}>
-                        Nueva publicación
-                      </span>{' '}
-                      — comparte un video o mensaje con la comunidad.
-                    </p>
-                    <Button
-                      type="button"
-                      onClick={openCreateModal}
-                      className="gap-2 font-bold text-white shadow-md"
-                      style={{ backgroundColor: 'var(--rolex)' }}
-                    >
-                      <Video className="h-4 w-4" />
-                      Subir video / publicar
-                    </Button>
-                  </div>
-                )}
               </div>
 
               <div className="mx-auto max-w-3xl space-y-6 p-6 md:p-8">
@@ -517,7 +496,7 @@ export default function Home() {
           </div>
         )}
         {activeTab === 'feed' && (
-          <div className="h-[calc(100vh-8rem)] overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+          <div className="h-[calc(100vh-8rem)] overflow-y-auto bg-gradient-to-br from-slate-50 via-zinc-100 to-gray-100">
             <div className="sticky top-0 z-10 border-b-2 border-rolex/30 bg-white/95 backdrop-blur-sm">
               <FeedToolbar
                 searchQuery={searchQuery}
@@ -530,19 +509,6 @@ export default function Home() {
                 onEstadoChange={setFilterEstado}
                 onClearFilters={clearFilters}
               />
-              {isAuthenticated && (
-                <div className="flex items-center justify-between gap-2 border-t border-rolex/10 px-3 py-1.5">
-                  <Button
-                    type="button"
-                    onClick={openCreateModal}
-                    className="flex-1 gap-2 py-3 text-sm font-bold text-white"
-                    style={{ backgroundColor: 'var(--rolex)' }}
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                    Nueva publicación
-                  </Button>
-                </div>
-              )}
             </div>
             <div className="space-y-4 p-4">
               {filteredPosts.length === 0 ? (
@@ -573,11 +539,12 @@ export default function Home() {
         <button
           type="button"
           onClick={openCreateModal}
-          className="fixed bottom-8 right-8 z-50 flex h-16 w-16 items-center justify-center rounded-full text-3xl font-bold text-white shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 md:h-20 md:w-20 md:text-4xl"
+          className="fixed bottom-8 right-8 z-50 flex items-center gap-2 rounded-full px-5 py-3 text-white shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95"
           style={{ backgroundColor: 'var(--rolex)' }}
-          aria-label="Crear publicación"
+          aria-label="Publicar"
         >
-          +
+          <span className="text-2xl font-bold leading-none">+</span>
+          <span className="text-sm font-bold">Publicar</span>
         </button>
       )}
     </div>

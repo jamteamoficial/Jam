@@ -17,6 +17,8 @@ export interface ProfileData {
 }
 
 interface User {
+  /** Id de Supabase Auth (necesario para perfil / claves) */
+  id?: string
   email: string
   username: string
   nombreCompleto: string
@@ -67,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const syncFromSupabase = async (supabaseUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string } }) => {
       const userData: User = {
+        id: supabaseUser.id,
         email: supabaseUser.email || `${supabaseUser.id}@jam.local`,
         username: supabaseUser.email?.split('@')[0] || supabaseUser.id.slice(0, 8),
         nombreCompleto: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || 'Usuario'

@@ -3,15 +3,17 @@
 @tailwind utilities;
 
 :root {
-  --rolex: #2f2f34;
-  --rolex-dark: #1f1f23;
-  --rolex-light: #4a4a51;
-  --rolex-20: rgba(47, 47, 52, 0.2);
-  --rolex-50: rgba(47, 47, 52, 0.5);
+  /* Naranja rojizo (~#FF5500); base de botones un poco más oscura */
+  --rolex: #e64d00;
+  --rolex-light: #ff5500;
+  --rolex-dark: #cc4400;
+  --rolex-20: rgba(230, 77, 0, 0.2);
+  --rolex-50: rgba(230, 77, 0, 0.5);
 }
 
-/* Tema minimalista global (neutro / monocromático). */
+/* Marca: utilidades que a veces compiten con estilos inline */
 .bg-rolex { background-color: var(--rolex) !important; }
+.hover\:bg-rolex-light:hover { background-color: var(--rolex-light) !important; }
 .hover\:bg-rolex-dark:hover { background-color: var(--rolex-dark) !important; }
 .text-rolex { color: var(--rolex) !important; }
 .border-rolex { border-color: var(--rolex) !important; }
@@ -46,23 +48,13 @@
   --tw-gradient-to: #e8e8eb var(--tw-gradient-to-position) !important;
 }
 
-/* Neutraliza acentos emerald/green usados en botones y badges */
-.bg-emerald-600,
-.bg-emerald-500,
-.bg-emerald-950,
-.bg-green-500,
-.bg-green-600,
-.bg-emerald-50 {
-  background-color: var(--rolex) !important;
-}
-
 .text-emerald-400,
 .text-emerald-300,
 .text-emerald-500,
 .text-emerald-200,
 .text-emerald-800,
 .text-emerald-900 {
-  color: var(--rolex-light) !important;
+  color: var(--rolex-dark) !important;
 }
 
 .border-emerald-600,
@@ -71,6 +63,44 @@
 .border-green-500,
 .border-green-600 {
   border-color: var(--rolex-50) !important;
+}
+
+/* Override agresivo: cualquier clase emerald/green pasa a neutro */
+[class*="text-emerald"],
+[class*="text-green"] {
+  color: var(--rolex-dark) !important;
+}
+
+/* Resto de clases emerald/green → naranja (botones) */
+[class*="bg-emerald"],
+[class*="bg-green"] {
+  background-color: var(--rolex) !important;
+}
+
+/* Tonos claros (no usar [class*="bg-emerald-50"]: coincide con bg-emerald-500) */
+.bg-emerald-50,
+.bg-emerald-100,
+.bg-emerald-50\/80 {
+  background-color: rgba(255, 85, 0, 0.14) !important;
+}
+
+[class*="border-emerald"],
+[class*="border-green"] {
+  border-color: rgba(230, 77, 0, 0.38) !important;
+}
+
+[class*="from-emerald"],
+[class*="via-emerald"],
+[class*="to-emerald"],
+[class*="from-green"],
+[class*="via-green"],
+[class*="to-green"],
+[class*="from-teal"],
+[class*="via-teal"],
+[class*="to-teal"] {
+  --tw-gradient-from: #f5f5f6 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(245 245 246 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
 }
 
 @keyframes jam-pulse {

@@ -116,7 +116,7 @@ export default function Communities() {
                   className={`w-full py-2 rounded-lg font-semibold transition-colors ${
                     isJoined
                       ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      : 'bg-rolex text-white hover:bg-rolex-dark'
+                      : 'bg-rolex text-white hover:bg-rolex-light'
                   }`}
                 >
                   {isJoined ? '✓ Unirse' : '+ Unirse'}

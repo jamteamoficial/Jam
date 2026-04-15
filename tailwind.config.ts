@@ -10,9 +10,9 @@ const config: Config = {
     extend: {
       colors: {
         rolex: {
-          DEFAULT: '#2f2f34',
-          light: '#4a4a51',
-          dark: '#1f1f23',
+          DEFAULT: '#e64d00',
+          light: '#ff5500',
+          dark: '#cc4400',
         },
       },
     },

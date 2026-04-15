@@ -208,7 +208,7 @@ export default function UserProfilePage() {
             <p className="text-gray-600 mb-6">El usuario @{username} no existe.</p>
             <Link 
               href="/"
-              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-dark transition-colors font-semibold"
+              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-light transition-colors font-semibold"
             >
               Volver al inicio
             </Link>

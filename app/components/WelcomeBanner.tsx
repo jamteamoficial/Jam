@@ -9,12 +9,12 @@ import GoogleLogin from '@/components/GoogleLogin'
 export default function WelcomeBanner() {
   return (
     <section
-      className="relative overflow-hidden border-b-2 border-rolex/20 bg-gradient-to-br from-[#0f2918] via-[#1A6329] to-[#145023] text-white"
+      className="relative overflow-hidden border-b-2 border-rolex/20 bg-gradient-to-br from-[#1f1f23] via-[#2f2f34] to-[#3a3a40] text-white"
       aria-labelledby="welcome-heading"
     >
       <div className="pointer-events-none absolute inset-0 opacity-[0.12]">
-        <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-emerald-400 blur-3xl" />
-        <div className="absolute -right-10 bottom-0 h-48 w-48 rounded-full bg-lime-300 blur-3xl" />
+        <div className="absolute -left-20 top-10 h-64 w-64 rounded-full bg-gray-300 blur-3xl" />
+        <div className="absolute -right-10 bottom-0 h-48 w-48 rounded-full bg-slate-200 blur-3xl" />
       </div>
       <div className="relative mx-auto max-w-5xl px-4 py-10 md:flex md:items-center md:justify-between md:gap-10 md:py-14">
         <div className="mb-8 md:mb-0 md:max-w-xl">
@@ -28,7 +28,7 @@ export default function WelcomeBanner() {
           >
             JAM: La red donde los músicos conectan y crean
           </h1>
-          <p className="mt-4 text-base text-emerald-100/95 md:text-lg">
+          <p className="mt-4 text-base text-gray-200/95 md:text-lg">
             Comparte tus videos, encuentra banda, jam sessions y comunidades por estilo.
             Todo en un solo lugar, con la misma pasión por la música.
           </p>
@@ -37,11 +37,11 @@ export default function WelcomeBanner() {
           <GoogleLogin variant="hero" label="Únete ahora" />
           <a
             href="#feed-main"
-            className="text-center text-sm font-medium text-emerald-200/90 underline-offset-4 hover:underline"
+            className="text-center text-sm font-medium text-gray-300/90 underline-offset-4 hover:underline"
           >
             Ver el feed sin cuenta
           </a>
-          <p className="text-center text-xs text-emerald-200/80 md:text-left">
+          <p className="text-center text-xs text-gray-300/80 md:text-left">
             Inicia sesión con Google para publicar, dar JAM y chatear.
           </p>
         </div>

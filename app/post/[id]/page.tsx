@@ -182,7 +182,7 @@ export default function PostDetailPage() {
             <h1 className="text-2xl font-bold text-gray-900 mb-4">Post no encontrado</h1>
             <Link 
               href="/"
-              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-dark transition-colors font-semibold"
+              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-light transition-colors font-semibold"
             >
               Volver al inicio
             </Link>

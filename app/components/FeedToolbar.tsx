@@ -52,18 +52,7 @@ export default function FeedToolbar({
 
   return (
     <div className="border-b border-rolex/15 bg-white/90 px-3 py-3 backdrop-blur-md md:px-4">
-      <div className="mx-auto flex max-w-4xl flex-col gap-3 md:flex-row md:items-center">
-        <div className="relative min-w-0 flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Buscar por usuario, texto o ciudad…"
-            className="w-full rounded-xl border-2 border-rolex/20 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-rolex focus:ring-2 focus:ring-rolex/20"
-            aria-label="Buscar en el feed"
-          />
-        </div>
+      <div className="mx-auto flex max-w-4xl justify-end">
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
@@ -95,6 +84,22 @@ export default function FeedToolbar({
 
       {open && (
         <div className="mx-auto mt-3 max-w-4xl rounded-xl border-2 border-rolex/20 bg-white p-4 shadow-lg">
+          <div className="mb-4">
+            <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">
+              Buscar
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="Buscar por usuario, texto o ciudad…"
+                className="w-full rounded-xl border-2 border-rolex/20 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-rolex focus:ring-2 focus:ring-rolex/20"
+                aria-label="Buscar en el feed"
+              />
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-bold uppercase tracking-wide text-gray-500">

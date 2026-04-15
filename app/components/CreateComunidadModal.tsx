@@ -12,7 +12,7 @@ interface CreateComunidadModalProps {
 }
 
 const COLOR_OPTIONS = [
-  { value: 'purple', label: 'Verde Rolex', gradient: 'from-rolex to-rolex-light' },
+  { value: 'purple', label: 'Marca (naranja)', gradient: 'from-rolex to-rolex-light' },
   { value: 'blue', label: 'Azul', gradient: 'from-blue-600 to-blue-700' },
   { value: 'red', label: 'Rojo', gradient: 'from-red-500 to-red-700' },
   { value: 'green', label: 'Verde', gradient: 'from-green-500 to-green-600' },
