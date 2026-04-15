@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
@@ -14,6 +14,19 @@ export default function Login() {
   })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Errores de OAuth (redirect desde /auth/callback)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const q = params.get('error')
+    if (q) {
+      setError(decodeURIComponent(q))
+      const url = new URL(window.location.href)
+      url.searchParams.delete('error')
+      window.history.replaceState({}, '', url.pathname + url.search)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

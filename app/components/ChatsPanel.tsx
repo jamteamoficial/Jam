@@ -29,6 +29,10 @@ interface Chat {
 export interface JamSolicitud {
   id: string
   emisorNombre: string
+  /** Valor para navegar al perfil: /usuario/[id] */
+  perfilId: string
+  /** Conversación a abrir al aceptar */
+  chatId: string
   avatar: string
   mensaje: string
   instrumento: string
@@ -67,6 +71,8 @@ const INITIAL_JAMS: JamSolicitud[] = [
   {
     id: 'jam-1',
     emisorNombre: 'Alex Drums',
+    perfilId: 'Alex Drums',
+    chatId: 'mock-1',
     avatar: '🥁',
     mensaje: '¿Te animás a un jam este viernes en Providencia?',
     instrumento: 'Batería',
@@ -76,6 +82,8 @@ const INITIAL_JAMS: JamSolicitud[] = [
   {
     id: 'jam-2',
     emisorNombre: 'Nina Keys',
+    perfilId: 'Nina Keys',
+    chatId: 'mock-2',
     avatar: '🎹',
     mensaje: 'Vi tu cover — ¿colaboramos en un tema original?',
     instrumento: 'Teclado',
@@ -85,6 +93,8 @@ const INITIAL_JAMS: JamSolicitud[] = [
   {
     id: 'jam-3',
     emisorNombre: 'Leo Bass',
+    perfilId: 'Leo Bass',
+    chatId: 'mock-3',
     avatar: '🎸',
     mensaje: 'Estamos armando una banda de funk, ¿sumás?',
     instrumento: 'Bajo',
@@ -343,12 +353,22 @@ export default function ChatsPanel() {
                 }`}
               >
                 <div className="mb-2 flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-lg ring-1 ring-emerald-600/20">
+                  <Link
+                    href={`/usuario/${encodeURIComponent(jam.perfilId)}`}
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-lg ring-1 ring-emerald-600/20 transition hover:scale-105 hover:ring-emerald-500/40"
+                    title="Ver perfil"
+                  >
                     {jam.avatar}
-                  </div>
+                  </Link>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-slate-100">{jam.emisorNombre}</span>
+                      <Link
+                        href={`/usuario/${encodeURIComponent(jam.perfilId)}`}
+                        className="truncate font-semibold text-slate-100 underline-offset-2 hover:text-emerald-300 hover:underline"
+                        title="Ver perfil del músico"
+                      >
+                        {jam.emisorNombre}
+                      </Link>
                       <span className="text-[10px] text-slate-500">{jam.fechaRelativa}</span>
                     </div>
                     <p className="text-[10px] font-medium uppercase tracking-wide text-emerald-500/90">
@@ -377,9 +397,22 @@ export default function ChatsPanel() {
                       Rechazar
                     </button>
                   </div>
+                ) : jam.estado === 'aceptado' ? (
+                  <div className="mt-2 space-y-2">
+                    <p className="text-center text-[11px] font-semibold uppercase tracking-wide text-emerald-400">
+                      ✓ Aceptado
+                    </p>
+                    <Link
+                      href={`/chat/${jam.chatId}`}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 py-2 text-xs font-bold text-white shadow-lg shadow-emerald-900/30 transition hover:bg-emerald-500"
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Mensaje
+                    </Link>
+                  </div>
                 ) : (
                   <p className="mt-2 text-center text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    {jam.estado === 'aceptado' ? '✓ Aceptado' : '✕ Rechazado'}
+                    ✕ Rechazado
                   </p>
                 )}
               </div>

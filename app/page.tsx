@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Link from 'next/link'
 import { useAuth } from './context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
-import { Music, Video, PlusCircle } from 'lucide-react'
+import { Music, Video, PlusCircle, MessageCircle, Users, Inbox, Check, XCircle, MapPin } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import ChatsPanel from './components/ChatsPanel'
 import ComunidadPanel from './components/ComunidadPanel'
@@ -12,6 +13,21 @@ import FeedToolbar from './components/FeedToolbar'
 import FeedVideoCard from './components/FeedVideoCard'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from './data/mockPosts'
 import { filterFeedPosts } from '@/src/lib/feedFilters'
+
+type DesktopJamEstado = 'pendiente' | 'aceptado' | 'rechazado'
+
+interface DesktopJamRequest {
+  id: string
+  usuario: string
+  chatId: string
+  estado: DesktopJamEstado
+  ciudad: string
+  comuna: string
+  edad: number
+  seguidores: number
+  estilos: string[]
+  bio: string
+}
 
 export default function Home() {
   const { user, isAuthenticated } = useAuth()
@@ -25,6 +41,7 @@ export default function Home() {
   const [filterInstrument, setFilterInstrument] = useState('Todos')
   const [filterCiudad, setFilterCiudad] = useState('')
   const [filterEstado, setFilterEstado] = useState('Todos')
+  const [desktopSideView, setDesktopSideView] = useState<'feed' | 'mensajes' | 'comunidades' | 'jams'>('feed')
 
   const filteredPosts = useMemo(
     () =>
@@ -46,6 +63,59 @@ export default function Home() {
 
   const openCreateModal = () => {
     window.dispatchEvent(new CustomEvent('openCreateModal'))
+  }
+
+  const [desktopJamRequests, setDesktopJamRequests] = useState<DesktopJamRequest[]>([
+    {
+      id: 'jam-1',
+      usuario: 'Carlos Rock',
+      chatId: 'mock-1',
+      estado: 'pendiente' as const,
+      ciudad: 'Santiago',
+      comuna: 'Providencia',
+      edad: 27,
+      seguidores: 320,
+      estilos: ['Rock', 'Funk'],
+      bio: 'Baterista de sesión, disponible para shows y grabaciones.',
+    },
+    {
+      id: 'jam-2',
+      usuario: 'María Jazz',
+      chatId: 'mock-2',
+      estado: 'pendiente' as const,
+      ciudad: 'Viña del Mar',
+      comuna: 'Reñaca',
+      edad: 24,
+      seguidores: 198,
+      estilos: ['Jazz', 'Neo Soul'],
+      bio: 'Tecladista y compositora, busco proyectos originales.',
+    },
+    {
+      id: 'jam-3',
+      usuario: 'Diego Beats',
+      chatId: 'mock-3',
+      estado: 'aceptado' as const,
+      ciudad: 'Valparaíso',
+      comuna: 'Cerro Alegre',
+      edad: 31,
+      seguidores: 540,
+      estilos: ['Funk', 'R&B', 'Pop'],
+      bio: 'Bajista groove-oriented. Ensayo semanal y buena onda.',
+    },
+  ])
+  const [openJamProfileId, setOpenJamProfileId] = useState<string | null>(null)
+  const pendingDesktopJams = desktopJamRequests.filter((j) => j.estado === 'pendiente').length
+
+  const aceptarDesktopJam = (id: string) => {
+    setDesktopJamRequests((prev) =>
+      prev.map((jam) => (jam.id === id ? { ...jam, estado: 'aceptado' as const } : jam))
+    )
+  }
+
+  const rechazarDesktopJam = (id: string) => {
+    setDesktopJamRequests((prev) =>
+      prev.map((jam) => (jam.id === id ? { ...jam, estado: 'rechazado' as const } : jam))
+    )
   }
 
   // Escuchar evento para toggle del panel de chats
@@ -189,143 +259,254 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Layout Desktop - 3 columnas */}
-      <div className="hidden md:flex h-screen">
-        {/* CHATS izquierda 25% */}
-        {chatsPanelVisible && (
-          <div className="w-1/4 bg-white border-r-2 border-rolex/30 overflow-y-auto relative">
-            <ChatsPanel />
-          </div>
-        )}
-
-        {/* Botón para mostrar chats cuando está oculto */}
-        {!chatsPanelVisible && (
-          <button
-            onClick={() => setChatsPanelVisible(true)}
-            className="fixed left-0 top-1/2 -translate-y-1/2 z-20 text-white p-2 rounded-r-lg transition-colors shadow-lg hover:opacity-90"
-            style={{ backgroundColor: 'var(--rolex)' }}
-            aria-label="Mostrar chats"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+      {/* Layout Desktop - Sidebar + Feed central (estilo TikTok Web) */}
+      <div className="hidden md:grid h-[calc(100vh-4rem)] grid-cols-[300px_minmax(0,1fr)]">
+        {/* Sidebar izquierdo fijo/sticky */}
+        <aside className="sticky top-0 h-[calc(100vh-4rem)] border-r border-rolex/20 bg-white/95 backdrop-blur-sm p-4">
+          <div className="space-y-2">
+            <button
+              onClick={() => setDesktopSideView('feed')}
+              className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition ${desktopSideView === 'feed' ? 'bg-rolex/10 text-rolex' : 'text-gray-600 hover:bg-gray-100'}`}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        )}
-
-        {/* FEED centro - ajusta ancho según si el panel está visible */}
-        <div className={`overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex flex-col transition-all duration-300 ${chatsPanelVisible ? 'w-1/2' : 'w-1/3'}`}>
-          <div className="sticky top-0 z-10 border-b-2 border-rolex/30 bg-white/95 shadow-sm backdrop-blur-sm">
-            <div className="flex">
-              <button
-                onClick={() => setActiveFeed('general')}
-                className={`flex-1 py-4 px-4 text-center font-semibold transition-all ${
-                  activeFeed === 'general'
-                    ? 'text-rolex border-b-2 border-rolex bg-rolex/10'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                General
-              </button>
-              <button
-                onClick={() => setActiveFeed('descubrir')}
-                className={`flex-1 py-4 px-4 text-center font-semibold transition-all ${
-                  activeFeed === 'descubrir'
-                    ? 'text-rolex border-b-2 border-rolex bg-rolex/10'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Descubrir
-              </button>
-              <button
-                onClick={() => setActiveFeed('conectar')}
-                className={`flex-1 py-4 px-4 text-center font-semibold transition-all ${
-                  activeFeed === 'conectar'
-                    ? 'text-rolex border-b-2 border-rolex bg-rolex/10'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Conectar
-              </button>
-              <button
-                onClick={() => setActiveFeed('aprender')}
-                className={`flex-1 py-4 px-4 text-center font-semibold transition-all ${
-                  activeFeed === 'aprender'
-                    ? 'text-rolex border-b-2 border-rolex bg-rolex/10'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Aprender
-              </button>
-            </div>
-            <FeedToolbar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              instrument={filterInstrument}
-              onInstrumentChange={setFilterInstrument}
-              ciudad={filterCiudad}
-              onCiudadChange={setFilterCiudad}
-              estado={filterEstado}
-              onEstadoChange={setFilterEstado}
-              onClearFilters={clearFilters}
-            />
-            {isAuthenticated && (
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rolex/10 px-4 py-3">
-                <p className="text-sm font-medium text-gray-600">
-                  <span className="font-bold" style={{ color: 'var(--rolex)' }}>
-                    Nueva publicación
-                  </span>{' '}
-                  — comparte un video o mensaje con la comunidad.
-                </p>
-                <Button
-                  type="button"
-                  onClick={openCreateModal}
-                  className="gap-2 font-bold text-white shadow-md"
-                  style={{ backgroundColor: 'var(--rolex)' }}
-                >
-                  <Video className="h-4 w-4" />
-                  Subir video / publicar
-                </Button>
-              </div>
-            )}
+              <span className="inline-flex items-center gap-2">
+                <Video className="h-4 w-4" />
+                Feed principal
+              </span>
+            </button>
+            <button
+              onClick={() => setDesktopSideView('comunidades')}
+              className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition ${desktopSideView === 'comunidades' ? 'bg-rolex/10 text-rolex' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Comunidades
+              </span>
+            </button>
+            <button
+              onClick={() => setDesktopSideView('mensajes')}
+              className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition ${desktopSideView === 'mensajes' ? 'bg-rolex/10 text-rolex' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Mensajes
+              </span>
+            </button>
+            <button
+              onClick={() => setDesktopSideView('jams')}
+              className={`w-full rounded-xl px-3 py-2 text-left font-semibold transition ${desktopSideView === 'jams' ? 'bg-rolex/10 text-rolex' : 'text-gray-600 hover:bg-gray-100'}`}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Inbox className="h-4 w-4" />
+                Solicitudes JAM
+                {pendingDesktopJams > 0 && (
+                  <span className="rounded-full bg-rolex px-2 text-xs text-white">{pendingDesktopJams}</span>
+                )}
+              </span>
+            </button>
           </div>
 
-          <div className="flex-1 space-y-6 p-6 md:p-8">
-            {filteredPosts.length === 0 ? (
-              <div className="flex h-96 flex-col items-center justify-center text-center">
-                <Music className="mb-4 h-20 w-20 text-rolex/50" />
-                <h2 className="mb-2 text-2xl font-bold text-gray-900">
-                  {currentPosts.length === 0 ? 'No hay publicaciones aún' : 'Nada coincide con tu búsqueda'}
-                </h2>
-                <p className="mb-6 text-gray-600">
-                  {currentPosts.length === 0
-                    ? 'Sé el primero en compartir'
-                    : 'Prueba otros filtros o limpia la búsqueda'}
-                </p>
-                {currentPosts.length > 0 && filteredPosts.length === 0 && (
-                  <Button variant="outline" onClick={clearFilters} style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}>
-                    Limpiar filtros
-                  </Button>
+          <div className="mt-6 border-t border-rolex/15 pt-4">
+            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Categorías de Feed</p>
+            <div className="space-y-1">
+              {(['general', 'descubrir', 'conectar', 'aprender'] as const).map((feed) => (
+                <button
+                  key={feed}
+                  onClick={() => {
+                    setActiveFeed(feed)
+                    setDesktopSideView('feed')
+                  }}
+                  className={`w-full rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                    activeFeed === feed ? 'bg-rolex text-white' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  {feed[0].toUpperCase() + feed.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-lg border border-rolex/15 bg-gray-50 p-3 text-xs text-gray-600">
+            Selecciona una opción y se abrirá en la columna principal.
+          </div>
+        </aside>
+
+        {/* FEED central - único scroll vertical */}
+        <main className="overflow-y-auto bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+          {desktopSideView === 'feed' && (
+            <>
+              <div className="sticky top-0 z-10 border-b-2 border-rolex/30 bg-white/95 shadow-sm backdrop-blur-sm">
+                <FeedToolbar
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  instrument={filterInstrument}
+                  onInstrumentChange={setFilterInstrument}
+                  ciudad={filterCiudad}
+                  onCiudadChange={setFilterCiudad}
+                  estado={filterEstado}
+                  onEstadoChange={setFilterEstado}
+                  onClearFilters={clearFilters}
+                />
+                {isAuthenticated && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-rolex/10 px-4 py-3">
+                    <p className="text-sm font-medium text-gray-600">
+                      <span className="font-bold" style={{ color: 'var(--rolex)' }}>
+                        Nueva publicación
+                      </span>{' '}
+                      — comparte un video o mensaje con la comunidad.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={openCreateModal}
+                      className="gap-2 font-bold text-white shadow-md"
+                      style={{ backgroundColor: 'var(--rolex)' }}
+                    >
+                      <Video className="h-4 w-4" />
+                      Subir video / publicar
+                    </Button>
+                  </div>
                 )}
               </div>
-            ) : (
-              filteredPosts.map((post) => (
-                <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* COMUNIDAD derecha - ajusta ancho según si el panel está visible */}
-        <div className={chatsPanelVisible ? 'w-1/4' : 'w-2/3'}>
-          <ComunidadPanel />
-        </div>
+              <div className="mx-auto max-w-3xl space-y-6 p-6 md:p-8">
+                {filteredPosts.length === 0 ? (
+                  <div className="flex h-96 flex-col items-center justify-center text-center">
+                    <Music className="mb-4 h-20 w-20 text-rolex/50" />
+                    <h2 className="mb-2 text-2xl font-bold text-gray-900">
+                      {currentPosts.length === 0 ? 'No hay publicaciones aún' : 'Nada coincide con tu búsqueda'}
+                    </h2>
+                    <p className="mb-6 text-gray-600">
+                      {currentPosts.length === 0
+                        ? 'Sé el primero en compartir'
+                        : 'Prueba otros filtros o limpia la búsqueda'}
+                    </p>
+                    {currentPosts.length > 0 && filteredPosts.length === 0 && (
+                      <Button variant="outline" onClick={clearFilters} style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}>
+                        Limpiar filtros
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  filteredPosts.map((post) => (
+                    <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
+                  ))
+                )}
+              </div>
+            </>
+          )}
+
+          {desktopSideView === 'mensajes' && (
+            <div className="mx-auto max-w-3xl p-6 md:p-8">
+              <div className="h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-rolex/20">
+                <ChatsPanel />
+              </div>
+            </div>
+          )}
+
+          {desktopSideView === 'comunidades' && (
+            <div className="mx-auto max-w-4xl p-6 md:p-8">
+              <div className="h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-rolex/20">
+                <ComunidadPanel />
+              </div>
+            </div>
+          )}
+
+          {desktopSideView === 'jams' && (
+            <div className="mx-auto max-w-3xl space-y-4 p-6 md:p-8">
+              <h2 className="text-2xl font-bold text-gray-900">Solicitudes JAM</h2>
+              {desktopJamRequests.map((jam) => (
+                <div key={jam.id} className="rounded-xl border border-rolex/20 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Link
+                        href={`/usuario/${encodeURIComponent(jam.usuario)}`}
+                        className="font-semibold text-gray-900 hover:underline"
+                      >
+                        {jam.usuario}
+                      </Link>
+                      <p className="text-sm text-gray-500">Estado: {jam.estado}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/usuario/${encodeURIComponent(jam.usuario)}`}
+                        className="rounded-lg px-3 py-2 text-sm font-semibold text-white"
+                        style={{ backgroundColor: 'var(--rolex)' }}
+                      >
+                        Ver perfil
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenJamProfileId((current) => (current === jam.id ? null : jam.id))
+                        }
+                        className="rounded-lg border border-rolex/30 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        Ver resumen
+                      </button>
+                    </div>
+                  </div>
+
+                  {openJamProfileId === jam.id && (
+                    <div className="mt-3 rounded-lg border border-rolex/15 bg-gray-50 p-3">
+                      <p className="text-sm text-gray-700">{jam.bio}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                        <p className="inline-flex items-center gap-1">
+                          <MapPin className="h-4 w-4 text-rolex/70" />
+                          {jam.ciudad}
+                        </p>
+                        <p>Comuna: <span className="font-semibold">{jam.comuna}</span></p>
+                        <p>Edad: <span className="font-semibold">{jam.edad}</span></p>
+                        <p>Seguidores: <span className="font-semibold">{jam.seguidores}</span></p>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {jam.estilos.map((estilo) => (
+                          <span key={estilo} className="rounded-full bg-white px-2 py-1 text-xs font-medium text-gray-700 border border-rolex/15">
+                            {estilo}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {jam.estado === 'pendiente' ? (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => aceptarDesktopJam(jam.id)}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white"
+                        style={{ backgroundColor: 'var(--rolex)' }}
+                      >
+                        <Check className="h-4 w-4" />
+                        Aceptar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => rechazarDesktopJam(jam.id)}
+                        className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Rechazar
+                      </button>
+                    </div>
+                  ) : jam.estado === 'aceptado' ? (
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-gray-50 p-2">
+                      <span className="text-sm font-semibold text-rolex">✓ JAM aceptado</span>
+                      <Link
+                        href={`/chat/${jam.chatId}`}
+                        className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-white"
+                        style={{ backgroundColor: 'var(--rolex)' }}
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Mensaje
+                      </Link>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm font-medium text-gray-500">Solicitud rechazada.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </main>
       </div>
 
       {/* Layout Móvil - Tabs */}

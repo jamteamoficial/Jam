@@ -3,18 +3,75 @@
 @tailwind utilities;
 
 :root {
-  --rolex: #1A6329;
-  --rolex-dark: #145023;
-  --rolex-light: #228B3A;
-  --rolex-20: rgba(26, 99, 41, 0.2);
-  --rolex-50: rgba(26, 99, 41, 0.5);
+  --rolex: #2f2f34;
+  --rolex-dark: #1f1f23;
+  --rolex-light: #4a4a51;
+  --rolex-20: rgba(47, 47, 52, 0.2);
+  --rolex-50: rgba(47, 47, 52, 0.5);
 }
 
-/* Garantizar que todos los botones con rolex usen el verde */
+/* Tema minimalista global (neutro / monocromático). */
 .bg-rolex { background-color: var(--rolex) !important; }
 .hover\:bg-rolex-dark:hover { background-color: var(--rolex-dark) !important; }
 .text-rolex { color: var(--rolex) !important; }
 .border-rolex { border-color: var(--rolex) !important; }
+
+/* Fondos degradados más sobrios */
+.from-green-50,
+.via-emerald-50,
+.to-teal-50,
+.to-emerald-100,
+.from-emerald-50,
+.to-green-50,
+.from-blue-50,
+.via-blue-50,
+.to-blue-100,
+.from-slate-50,
+.to-slate-100 {
+  --tw-gradient-from: #f5f5f6 var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: rgb(245 245 246 / 0) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.via-emerald-50,
+.via-blue-50 {
+  --tw-gradient-stops: var(--tw-gradient-from), #ececef var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
+}
+
+.to-teal-50,
+.to-emerald-100,
+.to-green-50,
+.to-blue-100,
+.to-slate-100 {
+  --tw-gradient-to: #e8e8eb var(--tw-gradient-to-position) !important;
+}
+
+/* Neutraliza acentos emerald/green usados en botones y badges */
+.bg-emerald-600,
+.bg-emerald-500,
+.bg-emerald-950,
+.bg-green-500,
+.bg-green-600,
+.bg-emerald-50 {
+  background-color: var(--rolex) !important;
+}
+
+.text-emerald-400,
+.text-emerald-300,
+.text-emerald-500,
+.text-emerald-200,
+.text-emerald-800,
+.text-emerald-900 {
+  color: var(--rolex-light) !important;
+}
+
+.border-emerald-600,
+.border-emerald-700,
+.border-emerald-800,
+.border-green-500,
+.border-green-600 {
+  border-color: var(--rolex-50) !important;
+}
 
 @keyframes jam-pulse {
   0%, 100% {
