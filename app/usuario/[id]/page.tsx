@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import React from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Heart, Users, Music, MapPin, Mail, Instagram, Sparkles, Radio, Play } from 'lucide-react'
+import { ArrowLeft, Heart, Users, Music, MapPin, Mail, Instagram, Sparkles, Radio, Play, Pencil, X } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
@@ -11,6 +11,9 @@ import { useToast } from '@/src/lib/hooks/use-toast'
 import PostActions from '@/app/components/PostActions'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from '@/app/data/mockPosts'
 import { createClient } from '@/src/lib/supabase/client'
+import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
+import { toggleFollow } from '@/src/lib/services/jam-social'
+import { createNotification } from '@/src/lib/services/notifications'
 
 function isProfileUuid(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
@@ -21,14 +24,13 @@ function mapSupabaseProfileRow(row: Record<string, unknown>): UserProfile {
   const email = (row.email as string) || ''
   const username = (row.username as string) || email.split('@')[0] || 'usuario'
   const fullName = (row.full_name as string)?.trim()
-  const displayArtistic = username.includes('_')
-    ? fullName || username.replace(/_[a-f0-9]+$/i, '') || username
-    : username
-  const avatarRaw = (row.avatar_url as string) || '🎵'
+  const displayArtistic = getDisplayName(fullName, username)
+  const avatarRaw = (row.avatar_url as string) || ''
   return {
     id: row.id as string,
     nombre: fullName || displayArtistic,
     nombreArtistico: displayArtistic,
+    username,
     avatar: avatarRaw,
     instrumento: instrumentos[0] || 'Músico',
     estilo: instrumentos[1] || 'Varios',
@@ -48,6 +50,7 @@ interface UserProfile {
   id: string
   nombre: string
   nombreArtistico: string
+  username?: string
   avatar: string
   instrumento: string
   estilo: string
@@ -493,6 +496,14 @@ export default function UsuarioProfilePage() {
   const [userPosts, setUserPosts] = useState<MockPost[]>([])
   const [totalLikes, setTotalLikes] = useState(0)
   const [following, setFollowing] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [editForm, setEditForm] = useState({
+    fullName: '',
+    username: '',
+    bio: '',
+    instrumentos: '',
+  })
 
   useEffect(() => {
     if (!isUuid) {
@@ -565,53 +576,147 @@ export default function UsuarioProfilePage() {
   }, [userId, isUuid])
 
   const userProfile = isUuid ? remoteProfile : mockProfile
+  const isOwnProfile = Boolean(
+    userProfile && user && (isUuid ? user.id === userProfile.id : user.username === userProfile.nombreArtistico)
+  )
 
   useEffect(() => {
-    if (userProfile) {
-      setFollowing(isFollowing(userProfile.nombreArtistico))
+    if (!userProfile) return
+
+    if (isUuid && user?.id) {
+      let cancelled = false
+      ;(async () => {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('follows')
+          .select('follower_id')
+          .eq('follower_id', user.id)
+          .eq('following_id', userProfile.id)
+          .maybeSingle()
+        if (!cancelled) setFollowing(!!data)
+      })()
+      return () => {
+        cancelled = true
+      }
     }
-  }, [userProfile, isFollowing])
 
-  // Cargar publicaciones del usuario
+    setFollowing(isFollowing(userProfile.nombreArtistico))
+  }, [userProfile, isFollowing, isUuid, user?.id])
+
+  // Cargar portafolio y likes totales del usuario
   useEffect(() => {
-    if (typeof window !== 'undefined' && userProfile) {
-      // Buscar en todos los feeds
-      const allPosts = [
-        ...GENERAL_POSTS,
-        ...DESCUBRIR_POSTS,
-        ...CONECTAR_POSTS,
-        ...APRENDER_POSTS
-      ]
+    if (!userProfile) return
+    let cancelled = false
 
-      // Filtrar publicaciones del usuario
-      const posts = allPosts.filter(post => 
-        post.usuario === userProfile.nombreArtistico
-      )
+    const loadPortfolio = async () => {
+      if (isUuid) {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from('posts')
+          .select('id, user_id, video_url, description, created_at')
+          .eq('user_id', userProfile.id)
+          .order('created_at', { ascending: false })
 
-      // También buscar en localStorage
-      const userPostsFromStorage = JSON.parse(localStorage.getItem('userPosts') || '[]')
-      const storagePosts = userPostsFromStorage.filter((post: MockPost) => 
-        post.usuario === userProfile.nombreArtistico
-      )
+        if (cancelled) return
 
-      setUserPosts([...storagePosts, ...posts])
+        if (error) {
+          console.error('[UsuarioProfilePage] Error cargando portafolio', error)
+          setUserPosts([])
+          setTotalLikes(0)
+          return
+        }
 
-      // Calcular likes totales
-      const savedPostLikes = localStorage.getItem('postLikes')
-      if (savedPostLikes) {
+        const dbPosts: MockPost[] = (data ?? []).map((row) => ({
+          id: row.id as string,
+          usuario: getDisplayName(userProfile.nombre, userProfile.username || userProfile.nombreArtistico),
+          username: userProfile.username || undefined,
+          full_name: userProfile.nombre || undefined,
+          user_id: row.user_id as string,
+          profile_id: row.user_id as string,
+          instrumento: userProfile.instrumento || 'Musico',
+          estilo: userProfile.estilo || 'Varios',
+          ciudad: userProfile.ciudad || '—',
+          texto: (row.description as string | null) || 'Video sin descripcion',
+          avatar: userProfile.avatar || '🎵',
+          tipo: 'video',
+          feedType: 'general',
+          video_url: row.video_url as string,
+        }))
+        setUserPosts(dbPosts)
+
+        const postIds = dbPosts.map((post) => post.id)
+        if (postIds.length === 0) {
+          setTotalLikes(0)
+          return
+        }
+
+        const countLikesFrom = async (
+          table: string,
+          column: string,
+          filter?: { column: string; value: string }
+        ) => {
+          let query = supabase.from(table).select('id', { count: 'exact', head: true }).in(column, postIds)
+          if (filter) {
+            query = query.eq(filter.column, filter.value)
+          }
+          return query
+        }
+
+        let likeCount = 0
+        const attempts = [
+          () => countLikesFrom('post_likes', 'post_id'),
+          () => countLikesFrom('likes', 'post_id'),
+          () => countLikesFrom('reactions', 'post_id', { column: 'type', value: 'like' }),
+        ]
+
+        for (const attempt of attempts) {
+          const { count, error: likesError } = await attempt()
+          if (!likesError) {
+            likeCount = count ?? 0
+            break
+          }
+        }
+
+        if (!cancelled) {
+          setTotalLikes(likeCount)
+        }
+        return
+      }
+
+      if (typeof window !== 'undefined') {
+        const allPosts = [...GENERAL_POSTS, ...DESCUBRIR_POSTS, ...CONECTAR_POSTS, ...APRENDER_POSTS]
+        const posts = allPosts.filter((post) => post.usuario === userProfile.nombreArtistico)
+        const userPostsFromStorage = JSON.parse(localStorage.getItem('userPosts') || '[]')
+        const storagePosts = userPostsFromStorage.filter(
+          (post: MockPost) => post.usuario === userProfile.nombreArtistico
+        )
+        const mergedPosts = [...storagePosts, ...posts]
+        setUserPosts(mergedPosts)
+
         try {
-          const postLikes: { [key: string]: number } = JSON.parse(savedPostLikes)
-          const allPostIds = [...posts, ...storagePosts].map(p => p.id)
-          const total = allPostIds.reduce((sum, id) => sum + (postLikes[id] || 0), 0)
+          const globalLikesRaw = localStorage.getItem('postLikes_global')
+          const legacyLikesRaw = localStorage.getItem('postLikes')
+          const likesMap: Record<string, number> = globalLikesRaw
+            ? JSON.parse(globalLikesRaw)
+            : legacyLikesRaw
+              ? JSON.parse(legacyLikesRaw)
+              : {}
+          const total = mergedPosts.reduce((sum, post) => sum + (likesMap[post.id] || 0), 0)
           setTotalLikes(total)
         } catch (error) {
           console.error('Error al calcular likes:', error)
+          setTotalLikes(0)
         }
       }
     }
-  }, [userProfile])
 
-  const handleFollow = () => {
+    void loadPortfolio()
+    return () => {
+      cancelled = true
+    }
+  }, [userProfile, isUuid])
+
+  const handleFollow = async () => {
     if (!user) {
       toast({
         title: "Inicia sesión",
@@ -620,11 +725,54 @@ export default function UsuarioProfilePage() {
       })
       return
     }
+    if (!userProfile) return
+
+    if (isUuid) {
+      const supabase = createClient()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      if (!authUser?.id) {
+        toast({
+          title: 'Sesión',
+          description: 'Inicia sesión con Google o email para seguir perfiles.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const { following: nowFollowing, error } = await toggleFollow(supabase, userProfile.id)
+      if (error) {
+        toast({
+          title: 'No se pudo actualizar',
+          description: error.message,
+          variant: 'destructive',
+        })
+        return
+      }
+      setFollowing(nowFollowing)
+
+      if (nowFollowing) {
+        const actorName = getDisplayName(user.nombreCompleto, user.username)
+        const { error: notifyErr } = await createNotification(supabase, {
+          userId: userProfile.id,
+          actorId: authUser.id,
+          type: 'follow',
+          title: 'Nuevo seguidor',
+          body: `${actorName} empezó a seguirte.`,
+        })
+        if (!notifyErr && typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('notifications-updated'))
+        }
+      }
+      return
+    }
+
     if (following) {
-      unfollowUser(userProfile!.nombreArtistico)
+      unfollowUser(userProfile.nombreArtistico)
       setFollowing(false)
     } else {
-      followUser(userProfile!.nombreArtistico)
+      followUser(userProfile.nombreArtistico)
       setFollowing(true)
     }
   }
@@ -662,6 +810,107 @@ export default function UsuarioProfilePage() {
     })
   }
 
+  const openEditModal = () => {
+    if (!userProfile) return
+    setEditForm({
+      fullName: userProfile.nombre || '',
+      username: userProfile.username || '',
+      bio: userProfile.bio || '',
+      instrumentos: userProfile.instrumentos.filter((i) => i !== '—').join(', '),
+    })
+    setEditOpen(true)
+  }
+
+  const handleSaveProfile = async () => {
+    if (!userProfile || !user?.id || !isUuid || user.id !== userProfile.id) return
+
+    const fullName = editForm.fullName.trim()
+    const username = editForm.username.trim().toLowerCase().replace(/\s+/g, '')
+    const bio = editForm.bio.trim()
+    const instrumentos = editForm.instrumentos
+      .split(',')
+      .map((i) => i.trim())
+      .filter(Boolean)
+
+    if (!username) {
+      toast({
+        title: 'Username requerido',
+        description: 'El username no puede estar vacío.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const supabase = createClient()
+    setSavingProfile(true)
+
+    const { data: usernameUsed, error: usernameError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', username)
+      .neq('id', userProfile.id)
+      .maybeSingle()
+
+    if (usernameError) {
+      setSavingProfile(false)
+      toast({
+        title: 'No se pudo validar username',
+        description: usernameError.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (usernameUsed) {
+      setSavingProfile(false)
+      toast({
+        title: 'Username no disponible',
+        description: 'Elige otro username, este ya está en uso.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update({
+        full_name: fullName || null,
+        username,
+        bio: bio || null,
+        instrumentos,
+      })
+      .eq('id', userProfile.id)
+
+    setSavingProfile(false)
+
+    if (updateError) {
+      toast({
+        title: 'No se pudo actualizar el perfil',
+        description: updateError.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setRemoteProfile((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        nombre: fullName || getDisplayName(fullName, username),
+        nombreArtistico: getDisplayName(fullName, username),
+        username,
+        bio: bio || 'Sin descripción aún.',
+        instrumentos: instrumentos.length > 0 ? instrumentos : ['—'],
+        instrumento: instrumentos[0] || prev.instrumento,
+      }
+    })
+    setEditOpen(false)
+    toast({
+      title: 'Perfil actualizado',
+      description: 'Tus cambios se guardaron correctamente.',
+    })
+  }
+
   if (isUuid && remoteProfile === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
@@ -688,6 +937,7 @@ export default function UsuarioProfilePage() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
       {/* Header */}
       <div className="bg-white border-b-2 border-rolex/30 sticky top-16 z-40">
@@ -716,17 +966,29 @@ export default function UsuarioProfilePage() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                userProfile.avatar
+                <span className="text-3xl font-bold text-white">
+                  {getInitials(getDisplayName(userProfile.nombre, userProfile.username || userProfile.nombreArtistico))}
+                </span>
               )}
             </div>
             <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">{userProfile.nombreArtistico}</h1>
+              <h1 className="text-4xl font-bold text-gray-900 mb-1">
+                {getDisplayName(userProfile.nombre, userProfile.username || userProfile.nombreArtistico)}
+              </h1>
+              <p className="mb-2 text-sm text-gray-500">
+                {getHandle(userProfile.username || userProfile.nombreArtistico)}
+              </p>
               <p className="text-xl text-rolex font-semibold mb-2">{userProfile.instrumento}</p>
               <div className="flex items-center gap-2 text-gray-600 mb-4">
                 <MapPin className="w-4 h-4" />
                 <span>{userProfile.ciudad}</span>
                 <span className="mx-2">•</span>
                 <span className="text-rolex font-semibold">{userProfile.nivelMusical}</span>
+                <span className="mx-2">•</span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700">
+                  <Heart className="h-3.5 w-3.5" />
+                  {totalLikes} Me gusta
+                </span>
               </div>
               <p className="text-gray-700 mb-4">{userProfile.bio}</p>
 
@@ -760,7 +1022,7 @@ export default function UsuarioProfilePage() {
               )}
               
               {/* Botones Seguir y JAM - solo si no es el propio perfil */}
-              {user?.username !== userProfile.nombreArtistico && (
+              {!isOwnProfile && (
                 <div className="flex gap-3 mb-4">
                   <Button
                     onClick={handleFollow}
@@ -783,6 +1045,19 @@ export default function UsuarioProfilePage() {
                   >
                     <Music className="w-4 h-4 mr-2" />
                     JAM
+                  </Button>
+                </div>
+              )}
+              {isOwnProfile && isUuid && (
+                <div className="mb-4">
+                  <Button
+                    onClick={openEditModal}
+                    variant="outline"
+                    className="border-2 font-semibold hover:opacity-90"
+                    style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Editar Perfil
                   </Button>
                 </div>
               )}
@@ -838,7 +1113,7 @@ export default function UsuarioProfilePage() {
                 <Heart className="w-5 h-5 text-red-500" />
                 <span className="text-2xl font-bold text-gray-900">{totalLikes}</span>
               </div>
-              <p className="text-sm text-gray-600">Likes totales</p>
+              <p className="text-sm text-gray-600">Me gusta</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-gray-600 mb-1">
@@ -864,13 +1139,13 @@ export default function UsuarioProfilePage() {
             Portafolio
           </h2>
           <p className="mb-6 text-sm text-gray-600">
-            Videos y publicaciones de {userProfile.nombreArtistico}
+            Videos y publicaciones de {getDisplayName(userProfile.nombre, userProfile.username || userProfile.nombreArtistico)}
           </p>
 
           {userPosts.length === 0 ? (
             <div className="rounded-2xl border-2 border-rolex/30 bg-white p-12 text-center shadow-lg">
               <Music className="mx-auto mb-4 h-16 w-16 text-rolex/50" />
-              <p className="text-lg text-gray-600">Este usuario aún no ha publicado nada</p>
+              <p className="text-lg text-gray-600">Este músico aún no ha subido videos</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -914,7 +1189,13 @@ export default function UsuarioProfilePage() {
                       )}
                     </div>
                     <div className="mt-4 space-y-2">
-                      <PostActions postId={post.id} usuario={post.usuario} />
+                      <PostActions
+                        postId={post.id}
+                        usuario={post.usuario}
+                        postOwnerId={isUuid ? userProfile.id : post.user_id ?? post.profile_id ?? null}
+                        ownerFullName={post.full_name ?? null}
+                        ownerUsername={post.username ?? null}
+                      />
                       <Button
                         onClick={() => handleJam(post.id, post.usuario)}
                         className="w-full font-bold text-white hover:opacity-90"
@@ -932,6 +1213,78 @@ export default function UsuarioProfilePage() {
         </div>
       </div>
     </div>
+      {editOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 px-4">
+          <div className="w-full max-w-xl rounded-2xl border border-rolex/20 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">Editar Perfil</h3>
+              <button
+                type="button"
+                className="rounded-full p-1 text-gray-500 transition hover:bg-gray-100"
+                onClick={() => setEditOpen(false)}
+                aria-label="Cerrar modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Nombre visible</label>
+                <input
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm((p) => ({ ...p, fullName: e.target.value }))}
+                  placeholder="Ej: Seba Mendez"
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Username</label>
+                <input
+                  value={editForm.username}
+                  onChange={(e) => setEditForm((p) => ({ ...p, username: e.target.value }))}
+                  placeholder="seba"
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+                />
+                <p className="mt-1 text-xs text-gray-500">Se validará si está disponible.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Bio</label>
+                <textarea
+                  value={editForm.bio}
+                  onChange={(e) => setEditForm((p) => ({ ...p, bio: e.target.value }))}
+                  rows={3}
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-gray-700">Instrumentos</label>
+                <input
+                  value={editForm.instrumentos}
+                  onChange={(e) => setEditForm((p) => ({ ...p, instrumentos: e.target.value }))}
+                  placeholder="Guitarra, Voz, Piano"
+                  className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setEditOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => void handleSaveProfile()}
+                disabled={savingProfile}
+                className="text-white hover:opacity-90"
+                style={{ backgroundColor: 'var(--rolex)' }}
+              >
+                {savingProfile ? 'Guardando...' : 'Guardar cambios'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 

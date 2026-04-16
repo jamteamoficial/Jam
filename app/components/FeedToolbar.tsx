@@ -161,7 +161,7 @@ export default function FeedToolbar({
                   Personas (cuentas reales)
                 </p>
                 <p className="mb-2 text-xs text-gray-500">
-                  Escribe al menos 2 caracteres para buscar por nombre, correo, usuario o biografía.
+                  Escribe al menos 2 caracteres para buscar por nombre, usuario, ciudad o instrumentos.
                 </p>
                 {peopleLoading && (
                   <p className="text-sm text-gray-500">Buscando personas…</p>
@@ -183,7 +183,10 @@ export default function FeedToolbar({
                       p.username?.replace(/_[a-f0-9]{10}$/i, '') ||
                       p.email?.split('@')[0] ||
                       'Usuario'
-                    const sub = [p.username, p.email].filter(Boolean).join(' · ')
+                    const instrumentos = (p.instrumentos ?? []).slice(0, 2).join(', ')
+                    const sub = [p.username ? `@${p.username}` : null, p.ciudad, instrumentos]
+                      .filter(Boolean)
+                      .join(' · ')
                     return (
                       <li key={p.id}>
                         <Link

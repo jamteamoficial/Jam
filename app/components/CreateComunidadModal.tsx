@@ -5,6 +5,8 @@ import { X, Users, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import { useAuth } from '@/app/context/AuthContext'
+import { createClient } from '@/src/lib/supabase/client'
+import { createCommunity, joinCommunity } from '@/src/lib/services/communities'
 
 interface CreateComunidadModalProps {
   isOpen: boolean
@@ -33,6 +35,15 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
   const [icono, setIcono] = useState('🎵')
   const [color, setColor] = useState('purple')
   const [loading, setLoading] = useState(false)
+
+  const slugifyCommunityId = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '')
+      .slice(0, 64)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -67,42 +78,48 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
     setLoading(true)
 
     try {
-      // Obtener comunidades existentes de localStorage
-      const existingComunidades = JSON.parse(localStorage.getItem('userComunidades') || '[]')
-      
-      // Crear ID único basado en el nombre (slug)
-      const comunidadId = nombre
-        .toLowerCase()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '')
-      
-      // Verificar si ya existe una comunidad con ese ID
-      const idExists = existingComunidades.some((c: any) => c.id === comunidadId)
-      if (idExists) {
+      const comunidadId = slugifyCommunityId(nombre)
+      if (!comunidadId) {
         toast({
-          title: "Nombre ya existe",
-          description: "Ya existe una comunidad con ese nombre. Por favor elige otro.",
+          title: "Nombre inválido",
+          description: "Usa un nombre con letras o números.",
           variant: "destructive"
         })
         setLoading(false)
         return
       }
 
-      const nuevaComunidad = {
+      const supabase = createClient()
+      const { error } = await createCommunity(supabase, {
         id: comunidadId,
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim(),
-        icono,
+        name: nombre.trim(),
+        description: descripcion.trim(),
+        icon: icono,
         color,
-        miembros: '1',
-        creador: user.username || user.email,
-        fechaCreacion: new Date().toISOString()
+      })
+
+      if (error) {
+        const msg = error.message.toLowerCase()
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+          toast({
+            title: "Nombre ya existe",
+            description: "Ya existe una comunidad con ese nombre. Elige otro.",
+            variant: "destructive"
+          })
+        } else {
+          toast({
+            title: "Error al crear comunidad",
+            description: error.message,
+            variant: "destructive"
+          })
+        }
+        setLoading(false)
+        return
       }
 
-      existingComunidades.push(nuevaComunidad)
-      localStorage.setItem('userComunidades', JSON.stringify(existingComunidades))
+      if (user.id) {
+        await joinCommunity(supabase, { communityId: comunidadId, userId: user.id })
+      }
 
       toast({
         title: "¡Comunidad creada!",
@@ -117,7 +134,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
       setLoading(false)
       onClose()
 
-      // Disparar evento para actualizar el panel
+      // Disparar evento para actualizar listados
       window.dispatchEvent(new CustomEvent('comunidadCreated'))
     } catch (error) {
       console.error('Error al crear comunidad:', error)

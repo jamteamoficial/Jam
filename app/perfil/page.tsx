@@ -6,8 +6,9 @@ import { useToast } from '@/src/lib/hooks/use-toast'
 import { syncProfileToSupabase } from '@/src/lib/supabase/syncProfileToSupabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, X, User } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/src/lib/supabase/client'
 
 interface ProfileData {
   nombreCompleto: string
@@ -20,6 +21,14 @@ interface ProfileData {
   descripcion: string
   contactoWhatsapp: string
   contactoInstagram: string
+}
+
+interface QuickProfileForm {
+  full_name: string
+  username: string
+  bio: string
+  ciudad: string
+  instrumentos: string
 }
 
 const NIVELES_MUSICALES = ['Principiante', 'Intermedio', 'Avanzado', 'Profesional']
@@ -39,6 +48,15 @@ function PerfilContent() {
   const searchParams = useSearchParams()
   const isOnboarding = searchParams.get('onboarding') === '1'
   const [loading, setLoading] = useState(false)
+  const [isQuickEditOpen, setIsQuickEditOpen] = useState(false)
+  const [quickLoading, setQuickLoading] = useState(false)
+  const [quickForm, setQuickForm] = useState<QuickProfileForm>({
+    full_name: '',
+    username: '',
+    bio: '',
+    ciudad: '',
+    instrumentos: '',
+  })
   const [formData, setFormData] = useState<ProfileData>({
     nombreCompleto: '',
     ciudad: '',
@@ -72,6 +90,31 @@ function PerfilContent() {
       }
     }
   }, [user])
+
+  useEffect(() => {
+    if (!user?.id || !isQuickEditOpen) return
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, username, bio, ciudad, instrumentos')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (cancelled || error || !data) return
+      const instruments = Array.isArray(data.instrumentos) ? data.instrumentos.join(', ') : ''
+      setQuickForm({
+        full_name: data.full_name || user.nombreCompleto || '',
+        username: data.username || user.username || '',
+        bio: data.bio || '',
+        ciudad: data.ciudad || '',
+        instrumentos: instruments,
+      })
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isQuickEditOpen, user])
 
   const handleInputChange = (field: keyof ProfileData, value: any) => {
     setFormData(prev => ({
@@ -169,6 +212,77 @@ function PerfilContent() {
     }
   }
 
+  const handleQuickChange = (field: keyof QuickProfileForm, value: string) => {
+    setQuickForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleQuickSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user?.id) return
+
+    const normalizedUsername = quickForm.username
+      .trim()
+      .toLowerCase()
+      .replace(/^@/, '')
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 40)
+
+    if (!quickForm.full_name.trim() || !normalizedUsername) {
+      toast({
+        title: 'Campos requeridos',
+        description: 'Nombre y username son obligatorios.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const instrumentos = quickForm.instrumentos
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+
+    setQuickLoading(true)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: quickForm.full_name.trim(),
+        username: normalizedUsername,
+        bio: quickForm.bio.trim() || null,
+        ciudad: quickForm.ciudad.trim() || null,
+        instrumentos: instrumentos.length > 0 ? instrumentos : null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', user.id)
+
+    setQuickLoading(false)
+    if (error) {
+      toast({
+        title: 'No se pudo actualizar el perfil',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const profileKey = `profile_${user.id || user.email}`
+    const merged = {
+      ...formData,
+      nombreCompleto: quickForm.full_name.trim(),
+      ciudad: quickForm.ciudad.trim(),
+      descripcion: quickForm.bio.trim(),
+      instrumentos,
+    }
+    localStorage.setItem(profileKey, JSON.stringify(merged))
+    setFormData(merged)
+
+    toast({
+      title: 'Perfil actualizado',
+      description: 'Tus cambios se guardaron en Supabase.',
+    })
+    setIsQuickEditOpen(false)
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
@@ -235,6 +349,17 @@ function PerfilContent() {
           <h1 className="text-4xl font-bold bg-rolex bg-clip-text text-transparent">
             {isOnboarding ? 'Crea tu perfil' : 'Mi Perfil'}
           </h1>
+          {!isOnboarding && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsQuickEditOpen(true)}
+              className="border-rolex/40 text-rolex hover:bg-rolex/10"
+            >
+              <User className="mr-2 h-4 w-4" />
+              Editar Perfil (modal)
+            </Button>
+          )}
         </div>
 
         {/* Formulario */}
@@ -428,6 +553,85 @@ function PerfilContent() {
           </div>
         </form>
       </div>
+
+      {isQuickEditOpen && (
+        <>
+          <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setIsQuickEditOpen(false)} />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-2xl rounded-2xl border-2 border-rolex/30 bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">Editar Perfil</h2>
+                <button
+                  type="button"
+                  onClick={() => setIsQuickEditOpen(false)}
+                  className="rounded-full bg-gray-100 p-2 hover:bg-gray-200"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <form className="space-y-4" onSubmit={handleQuickSave}>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Nombre completo</label>
+                  <input
+                    value={quickForm.full_name}
+                    onChange={(e) => handleQuickChange('full_name', e.target.value)}
+                    className="w-full rounded-xl border-2 border-rolex/30 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rolex"
+                    placeholder="Seba Méndez"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Username</label>
+                  <input
+                    value={quickForm.username}
+                    onChange={(e) => handleQuickChange('username', e.target.value)}
+                    className="w-full rounded-xl border-2 border-rolex/30 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rolex"
+                    placeholder="sebamendez"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-gray-700">Bio</label>
+                  <textarea
+                    value={quickForm.bio}
+                    onChange={(e) => handleQuickChange('bio', e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border-2 border-rolex/30 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rolex"
+                    placeholder="Cuéntanos sobre ti"
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-gray-700">Ciudad</label>
+                    <input
+                      value={quickForm.ciudad}
+                      onChange={(e) => handleQuickChange('ciudad', e.target.value)}
+                      className="w-full rounded-xl border-2 border-rolex/30 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rolex"
+                      placeholder="Santiago"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-semibold text-gray-700">Instrumentos</label>
+                    <input
+                      value={quickForm.instrumentos}
+                      onChange={(e) => handleQuickChange('instrumentos', e.target.value)}
+                      className="w-full rounded-xl border-2 border-rolex/30 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rolex"
+                      placeholder="Guitarra, Voz, Piano"
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={quickLoading}
+                  className="w-full text-white hover:opacity-90"
+                  style={{ backgroundColor: 'var(--rolex)' }}
+                >
+                  {quickLoading ? 'Guardando...' : 'Guardar cambios'}
+                </Button>
+              </form>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

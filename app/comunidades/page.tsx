@@ -1,8 +1,17 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/src/lib/supabase/client'
+import {
+  getCommunityMemberCountMap,
+  joinCommunity,
+  listCommunities,
+  type CommunityRow,
+} from '@/src/lib/services/communities'
+import { useAuth } from '@/app/context/AuthContext'
 
 const COMUNIDADES = [
   { 
@@ -103,6 +112,40 @@ const getColorClasses = (color: string) => {
 }
 
 export default function ComunidadesPage() {
+  const { user } = useAuth()
+  const [communities, setCommunities] = useState(COMUNIDADES)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const [{ data }, { data: countMap }] = await Promise.all([
+        listCommunities(supabase),
+        getCommunityMemberCountMap(supabase),
+      ])
+      if (cancelled || !data || data.length === 0) return
+      setCommunities(
+        (data as CommunityRow[]).map((c) => ({
+          id: c.id,
+          nombre: c.name,
+          icono: c.icon || '🎵',
+          descripcion: c.description || 'Comunidad musical',
+          color: c.color || 'purple',
+          miembros: String(countMap?.[c.id] ?? 0),
+        }))
+      )
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const handleJoin = async (communityId: string) => {
+    if (!user?.id) return
+    const supabase = createClient()
+    await joinCommunity(supabase, { communityId, userId: user.id })
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-8 px-4">
       <div className="max-w-4xl mx-auto">
@@ -121,7 +164,7 @@ export default function ComunidadesPage() {
 
         {/* Grid de Comunidades */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {COMUNIDADES.map((comunidad) => (
+          {communities.map((comunidad) => (
             <div 
               key={comunidad.id}
               className="border-2 border-rolex/30 hover:border-rolex transition-all duration-300 hover:shadow-xl cursor-pointer group rounded-xl bg-white p-6"
@@ -142,10 +185,11 @@ export default function ComunidadesPage() {
                       👥 {comunidad.miembros} miembros
                     </span>
                     <Button 
+                      onClick={() => void handleJoin(comunidad.id)}
                       className="text-white hover:opacity-90"
                       style={{ backgroundColor: 'var(--rolex)' }}
                     >
-                      Entrar
+                      Unirme
                     </Button>
                   </div>
                 </div>

@@ -17,13 +17,17 @@ export async function syncProfileToSupabase(
   emailLocalUsername: string
 ): Promise<{ error: Error | null }> {
   const supabase = createClient()
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('id', userId)
+    .maybeSingle()
+
   const base = (email?.split('@')[0] || emailLocalUsername || 'usuario')
     .toLowerCase()
     .replace(/[^a-z0-9_]/g, '')
-    .slice(0, 24)
-
-  // Sufijo del id para unicidad en username (evita colisión entre dos "juan")
-  const username = `${base || 'user'}_${userId.replace(/-/g, '').slice(0, 10)}`.slice(0, 40)
+    .slice(0, 40)
+  const username = (existingProfile?.username as string | null) || base || `user${userId.slice(0, 6)}`
 
   const row = {
     id: userId,

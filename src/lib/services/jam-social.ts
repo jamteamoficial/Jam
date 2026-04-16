@@ -17,6 +17,20 @@ export type FeedPostRow = {
   } | null
 }
 
+export type PostCommentRow = {
+  id: string
+  post_id: string
+  user_id: string
+  content: string
+  created_at: string
+  profiles: {
+    id: string
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+  } | null
+}
+
 /**
  * Feed principal: posts ordenados por fecha + datos públicos del perfil.
  * Usar con cliente browser (createBrowserClient) o servidor (createServerClient).
@@ -50,6 +64,38 @@ export async function getFeed(
     .limit(limit)
 }
 
+export async function getFeedByUserIds(
+  supabase: SupabaseClient,
+  input: { userIds: string[]; limit?: number }
+) {
+  if (input.userIds.length === 0) {
+    return { data: [], error: null }
+  }
+  const limit = input.limit ?? 50
+  return supabase
+    .from('posts')
+    .select(
+      `
+      id,
+      user_id,
+      video_url,
+      description,
+      created_at,
+      profiles (
+        id,
+        username,
+        full_name,
+        avatar_url,
+        bio,
+        instrumentos
+      )
+    `
+    )
+    .in('user_id', input.userIds)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+}
+
 /**
  * Crea un post con video (URL pública, p. ej. Storage de Supabase).
  */
@@ -73,6 +119,140 @@ export async function createPost(
       video_url: input.video_url,
       description: input.description ?? null,
     })
+    .select()
+    .single()
+}
+
+/**
+ * Edita la descripción de un post propio.
+ */
+export async function updatePostDescription(
+  supabase: SupabaseClient,
+  input: { postId: string; userId: string; description: string | null }
+) {
+  return supabase
+    .from('posts')
+    .update({
+      description: input.description,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.postId)
+    .eq('user_id', input.userId)
+    .select()
+    .single()
+}
+
+/**
+ * Elimina un post propio.
+ */
+export async function deletePost(
+  supabase: SupabaseClient,
+  input: { postId: string; userId: string }
+) {
+  return supabase
+    .from('posts')
+    .delete()
+    .eq('id', input.postId)
+    .eq('user_id', input.userId)
+}
+
+/**
+ * Obtiene comentarios recientes de un post.
+ */
+export async function getCommentsByPost(
+  supabase: SupabaseClient,
+  postId: string,
+  options?: { limit?: number }
+) {
+  const limit = options?.limit ?? 50
+  return supabase
+    .from('comments')
+    .select(
+      `
+      id,
+      post_id,
+      user_id,
+      content,
+      created_at,
+      profiles (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+    `
+    )
+    .eq('post_id', postId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+}
+
+/**
+ * Crea un comentario asociado al usuario autenticado.
+ */
+export async function createComment(
+  supabase: SupabaseClient,
+  input: { postId: string; content: string }
+) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: null, error: new Error('Debes iniciar sesión para comentar') }
+  }
+
+  const trimmed = input.content.trim()
+  if (!trimmed) {
+    return { data: null, error: new Error('El comentario está vacío') }
+  }
+
+  return supabase
+    .from('comments')
+    .insert({
+      post_id: input.postId,
+      user_id: user.id,
+      content: trimmed,
+    })
+    .select()
+    .single()
+}
+
+/**
+ * Elimina comentario propio.
+ */
+export async function deleteComment(
+  supabase: SupabaseClient,
+  input: { commentId: string; userId: string }
+) {
+  return supabase
+    .from('comments')
+    .delete()
+    .eq('id', input.commentId)
+    .eq('user_id', input.userId)
+}
+
+/**
+ * Edita un comentario propio.
+ */
+export async function updateComment(
+  supabase: SupabaseClient,
+  input: { commentId: string; userId: string; content: string }
+) {
+  const trimmed = input.content.trim()
+  if (!trimmed) {
+    return { data: null, error: new Error('El comentario está vacío') }
+  }
+
+  return supabase
+    .from('comments')
+    .update({
+      content: trimmed,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.commentId)
+    .eq('user_id', input.userId)
     .select()
     .single()
 }

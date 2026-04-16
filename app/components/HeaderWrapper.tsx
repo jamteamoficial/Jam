@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Header from './Header'
 import ProfilePanel from './ProfilePanel'
 import CreateModal from './CreateModal'
@@ -24,10 +24,12 @@ export default function HeaderWrapper({ children }: { children: React.ReactNode 
 
   return (
     <>
-      <Header 
-        onProfileClick={() => setShowProfile(true)}
-        onLoginClick={() => setShowLogin(true)}
-      />
+      <Suspense fallback={null}>
+        <Header 
+          onProfileClick={() => setShowProfile(true)}
+          onLoginClick={() => setShowLogin(true)}
+        />
+      </Suspense>
       <main className="pt-16">
         {children}
       </main>

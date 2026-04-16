@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react'
 import { Users, Plus, MessageCircle, LogIn } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import CreateComunidadModal from './CreateComunidadModal'
+import { createClient } from '@/src/lib/supabase/client'
+import {
+  getCommunityMemberCountMap,
+  joinCommunity,
+  listCommunities,
+  listMyCommunityMembershipIds,
+  type CommunityRow,
+} from '@/src/lib/services/communities'
+import { useAuth } from '@/app/context/AuthContext'
 
 interface Comunidad {
   id: string
@@ -112,80 +121,73 @@ const getIconGradient = (color: string) => {
   return map[color] || 'from-emerald-600 to-green-900'
 }
 
-export default function ComunidadPanel() {
+interface ComunidadPanelProps {
+  onSelectCommunity?: (community: { id: string; nombre: string } | null) => void
+  selectedCommunityId?: string | null
+}
+
+function mapRowToCommunity(row: CommunityRow, membersCount?: number): Comunidad {
+  return {
+    id: row.id,
+    nombre: row.name,
+    icono: row.icon || '🎵',
+    descripcion: row.description || 'Comunidad musical',
+    color: row.color || 'purple',
+    miembros: String(membersCount ?? 0),
+  }
+}
+
+export default function ComunidadPanel({ onSelectCommunity, selectedCommunityId }: ComunidadPanelProps) {
   const router = useRouter()
+  const { user } = useAuth()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userComunidades, setUserComunidades] = useState<Comunidad[]>([])
   /** Simula membresía por id de comunidad (para demo / hasta conectar con Supabase) */
   const [miembroDe, setMiembroDe] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('userComunidades')
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved)
-          setUserComunidades(parsed)
-        } catch {
-          console.error('Error al cargar comunidades')
-        }
-      }
-      const memb = localStorage.getItem('jam_comunidad_miembros_mock')
-      if (memb) {
-        try {
-          setMiembroDe(JSON.parse(memb))
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  }, [])
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const saved = localStorage.getItem('userComunidades')
-      if (saved) {
-        try {
-          setUserComunidades(JSON.parse(saved))
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('comunidadCreated', handleStorageChange)
+    if (!user?.id) return
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const [{ data: communities }, { data: mine }, { data: countMap }] = await Promise.all([
+        listCommunities(supabase),
+        listMyCommunityMembershipIds(supabase, user.id),
+        getCommunityMemberCountMap(supabase),
+      ])
+      if (cancelled) return
+      setUserComunidades(
+        (communities ?? []).map((row) =>
+          mapRowToCommunity(row as CommunityRow, countMap?.[(row as CommunityRow).id] ?? 0)
+        )
+      )
+      const mineMap: Record<string, boolean> = {}
+      for (const id of mine ?? []) mineMap[id] = true
+      setMiembroDe(mineMap)
+    })()
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('comunidadCreated', handleStorageChange)
+      cancelled = true
     }
-  }, [])
-
-  const persistMembresia = (next: Record<string, boolean>) => {
-    setMiembroDe(next)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('jam_comunidad_miembros_mock', JSON.stringify(next))
-    }
-  }
-
-  const setMembresia = (id: string, value: boolean) => {
-    setMiembroDe((prev) => {
-      const next = { ...prev, [id]: value }
-      persistMembresia(next)
-      return next
-    })
-  }
+  }, [user?.id, showCreateModal])
 
   /** Demo: unirse con un clic; si ya eres miembro, el mismo botón abre el chat */
-  const handlePrimaryAction = (comunidadId: string) => {
+  const handlePrimaryAction = async (comunidadId: string) => {
+    if (!user?.id) return
     const soyMiembro = miembroDe[comunidadId]
     if (soyMiembro) {
       router.push(`/comunidad/${comunidadId}/chat`)
     } else {
-      setMembresia(comunidadId, true)
+      const supabase = createClient()
+      const { error } = await joinCommunity(supabase, {
+        communityId: comunidadId,
+        userId: user.id,
+      })
+      if (!error) {
+        setMiembroDe((prev) => ({ ...prev, [comunidadId]: true }))
+      }
     }
   }
-
-  const allComunidades = [...userComunidades, ...COMUNIDADES]
+  const allComunidades = userComunidades.length > 0 ? userComunidades : COMUNIDADES
 
   return (
     <>
@@ -241,7 +243,7 @@ export default function ComunidadPanel() {
                   <div className="flex flex-col gap-2">
                     <button
                       type="button"
-                      onClick={() => handlePrimaryAction(comunidad.id)}
+                      onClick={() => void handlePrimaryAction(comunidad.id)}
                       className={`w-full rounded-lg px-3 py-2.5 text-sm font-bold transition ${
                         soyMiembro
                           ? 'border-2 border-emerald-500/50 bg-slate-900/80 text-emerald-300 hover:bg-slate-800'
@@ -263,18 +265,30 @@ export default function ComunidadPanel() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => router.push(`/comunidad/${comunidad.id}`)}
+                      onClick={() => {
+                        onSelectCommunity?.({ id: comunidad.id, nombre: comunidad.nombre })
+                        router.push(`/comunidad/${comunidad.id}`)
+                      }}
                       className="w-full rounded-lg border border-slate-600 py-2 text-xs font-semibold text-slate-300 transition hover:bg-slate-700/50"
                     >
-                      Ver detalle
+                      Ver detalle / filtrar feed
                     </button>
-                    {soyMiembro && (
+                    {soyMiembro && !selectedCommunityId && (
                       <button
                         type="button"
-                        onClick={() => setMembresia(comunidad.id, false)}
-                        className="w-full text-center text-[10px] font-medium text-slate-500 underline-offset-2 hover:text-slate-400 hover:underline"
+                        onClick={() => onSelectCommunity?.({ id: comunidad.id, nombre: comunidad.nombre })}
+                        className="w-full rounded-lg border border-emerald-700/40 py-2 text-xs font-semibold text-emerald-300 transition hover:bg-emerald-900/20"
                       >
-                        Dejar comunidad (demo)
+                        Filtrar feed por esta comunidad
+                      </button>
+                    )}
+                    {selectedCommunityId === comunidad.id && (
+                      <button
+                        type="button"
+                        onClick={() => onSelectCommunity?.(null)}
+                        className="w-full text-center text-[10px] font-medium text-emerald-300 underline-offset-2 hover:underline"
+                      >
+                        Quitar filtro de comunidad
                       </button>
                     )}
                   </div>

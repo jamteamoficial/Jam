@@ -3,6 +3,11 @@
 export interface MockPost {
   id: string
   usuario: string
+  username?: string
+  full_name?: string
+  avatar_url?: string | null
+  profile_id?: string
+  user_id?: string
   instrumento: string
   estilo: string
   ciudad: string

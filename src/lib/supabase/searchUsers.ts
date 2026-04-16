@@ -9,6 +9,7 @@ export type ProfileSearchRow = {
   email: string | null
   full_name: string | null
   username: string | null
+  ciudad: string | null
   bio: string | null
   instrumentos: string[] | null
 }
@@ -18,7 +19,7 @@ export type ProfileSearchRow = {
  * Si añades avatar_url o ciudad en Supabase, inclúyelas aquí.
  */
 const SEARCH_SELECT =
-  'id, email, full_name, username, bio, instrumentos'
+  'id, email, full_name, username, ciudad, bio, instrumentos'
 
 function mergeById(rows: ProfileSearchRow[]): ProfileSearchRow[] {
   const map = new Map<string, ProfileSearchRow>()
@@ -61,7 +62,7 @@ export async function searchProfiles(query: string): Promise<{
     console.log('[searchProfiles] Sesión OK, uid:', session.user.id)
   }
 
-  const textColumns = ['email', 'full_name', 'username', 'bio'] as const
+  const textColumns = ['email', 'full_name', 'username', 'bio', 'ciudad'] as const
 
   async function queryIlike(column: (typeof textColumns)[number]): Promise<ProfileSearchRow[]> {
     const { data, error } = await supabase
@@ -83,7 +84,22 @@ export async function searchProfiles(query: string): Promise<{
 
   try {
     const chunks = await Promise.all(textColumns.map((col) => queryIlike(col)))
-    const merged = mergeById(chunks.flat())
+    const merged = mergeById(chunks.flat()).filter((row) => {
+      const hayTexto = [
+        row.email ?? '',
+        row.full_name ?? '',
+        row.username ?? '',
+        row.bio ?? '',
+        row.ciudad ?? '',
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(q.toLowerCase())
+      const hayInstrumento = (row.instrumentos ?? []).some((inst) =>
+        inst.toLowerCase().includes(q.toLowerCase())
+      )
+      return hayTexto || hayInstrumento
+    })
     console.log('[searchProfiles] combinado', merged.length, merged)
     return { data: merged, error: null }
   } catch (e) {

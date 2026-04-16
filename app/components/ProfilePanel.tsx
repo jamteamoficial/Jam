@@ -5,6 +5,7 @@ import { X, Heart, Video, MessageCircle, Music, MapPin, Edit } from 'lucide-reac
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
 import Link from 'next/link'
+import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 
 interface ProfilePanelProps {
   isOpen: boolean
@@ -73,17 +74,13 @@ export default function ProfilePanel({ isOpen, onClose }: ProfilePanelProps) {
             <div className="space-y-6">
               {/* Profile Summary */}
               <div className="border-2 border-rolex/30 rounded-xl shadow-lg p-6 flex flex-col items-center text-center">
-                <div className="w-24 h-24 rounded-full bg-rolex flex items-center justify-center text-5xl text-white font-bold mb-4">
-                  {profileData?.nombreCompleto 
-                    ? profileData.nombreCompleto[0].toUpperCase() 
-                    : user.nombreCompleto 
-                    ? user.nombreCompleto[0].toUpperCase() 
-                    : 'U'}
+                <div className="w-24 h-24 rounded-full bg-rolex/20 flex items-center justify-center text-3xl text-gray-700 font-bold mb-4">
+                  {getInitials(getDisplayName(profileData?.nombreCompleto, user.username))}
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900">
-                  {profileData?.nombreCompleto || user.nombreCompleto || user.username}
+                  {getDisplayName(profileData?.nombreCompleto || user.nombreCompleto, user.username)}
                 </h3>
-                <p className="text-gray-600 text-sm">@{user.username}</p>
+                <p className="text-gray-600 text-sm">{getHandle(user.username)}</p>
                 {profileData?.nivelMusical && (
                   <p className="text-sm text-rolex font-semibold mt-1">{profileData.nivelMusical}</p>
                 )}

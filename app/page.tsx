@@ -8,10 +8,19 @@ import { Music, Video, MessageCircle, Users, Inbox, Check, XCircle, MapPin } fro
 import { Button } from '@/components/ui/button'
 import ChatsPanel from './components/ChatsPanel'
 import ComunidadPanel from './components/ComunidadPanel'
-import FeedToolbar from './components/FeedToolbar'
+import FeedToolbar, { ESTADO_FILTERS, INSTRUMENT_FILTERS } from './components/FeedToolbar'
 import FeedVideoCard from './components/FeedVideoCard'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from './data/mockPosts'
 import { filterFeedPosts } from '@/src/lib/feedFilters'
+import { createClient } from '@/src/lib/supabase/client'
+import {
+  deletePost,
+  getFeed,
+  getFeedByUserIds,
+  updatePostDescription,
+  type FeedPostRow,
+} from '@/src/lib/services/jam-social'
+import { listCommunityMemberIds } from '@/src/lib/services/communities'
 
 type DesktopJamEstado = 'pendiente' | 'aceptado' | 'rechazado'
 
@@ -28,12 +37,40 @@ interface DesktopJamRequest {
   bio: string
 }
 
+type AppFeedPost = MockPost & {
+  user_id?: string
+  created_at?: string
+}
+
+function mapFeedRowToPost(row: FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })): AppFeedPost {
+  const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    created_at: row.created_at,
+    usuario: profile?.full_name || profile?.username || row.user_id.slice(0, 8),
+    full_name: profile?.full_name || undefined,
+    username: profile?.username || undefined,
+    avatar_url: profile?.avatar_url || null,
+    profile_id: row.user_id,
+    instrumento: profile?.instrumentos?.[0] || 'Músico',
+    estilo: profile?.bio || 'Varios',
+    ciudad: '—',
+    texto: row.description || '',
+    avatar: '🎵',
+    tipo: 'video',
+    feedType: 'general',
+    video_url: row.video_url,
+    estado: 'Disponible para tocar',
+  }
+}
+
 export default function Home() {
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
   const [activeTab, setActiveTab] = useState<'chats' | 'feed' | 'comunidad'>('feed')
   const [activeFeed, setActiveFeed] = useState<'general' | 'descubrir' | 'conectar' | 'aprender'>('general')
-  const [currentPosts, setCurrentPosts] = useState<MockPost[]>(GENERAL_POSTS)
+  const [currentPosts, setCurrentPosts] = useState<AppFeedPost[]>(GENERAL_POSTS)
   const [chatsPanelVisible, setChatsPanelVisible] = useState(true)
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -41,6 +78,74 @@ export default function Home() {
   const [filterCiudad, setFilterCiudad] = useState('')
   const [filterEstado, setFilterEstado] = useState('Todos')
   const [desktopSideView, setDesktopSideView] = useState<'feed' | 'mensajes' | 'comunidades' | 'jams'>('feed')
+  const [selectedCommunity, setSelectedCommunity] = useState<{ id: string; nombre: string } | null>(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const syncFromUrl = () => {
+      const params = new URLSearchParams(window.location.search)
+      const qParam = params.get('q') ?? ''
+      const instrumentParam = params.get('instrument') ?? 'Todos'
+      const ciudadParam = params.get('city') ?? ''
+      const estadoParam = params.get('estado') ?? 'Todos'
+
+      setSearchQuery((prev) => (prev === qParam ? prev : qParam))
+      setFilterInstrument((prev) =>
+        prev === instrumentParam
+          ? prev
+          : INSTRUMENT_FILTERS.includes(instrumentParam as (typeof INSTRUMENT_FILTERS)[number])
+            ? instrumentParam
+            : 'Todos'
+      )
+      setFilterCiudad((prev) => (prev === ciudadParam ? prev : ciudadParam))
+      setFilterEstado((prev) =>
+        prev === estadoParam
+          ? prev
+          : ESTADO_FILTERS.includes(estadoParam as (typeof ESTADO_FILTERS)[number])
+            ? estadoParam
+            : 'Todos'
+      )
+    }
+
+    const onGlobalSearch = (ev: Event) => {
+      const custom = ev as CustomEvent<{ q?: string }>
+      const q = custom.detail?.q ?? ''
+      setSearchQuery((prev) => (prev === q ? prev : q))
+    }
+
+    syncFromUrl()
+    window.addEventListener('popstate', syncFromUrl)
+    window.addEventListener('global-search-changed', onGlobalSearch as EventListener)
+    return () => {
+      window.removeEventListener('popstate', syncFromUrl)
+      window.removeEventListener('global-search-changed', onGlobalSearch as EventListener)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+
+    const setOrDelete = (key: string, value: string, emptyValue = '') => {
+      const trimmed = value.trim()
+      if (!trimmed || trimmed === emptyValue) {
+        params.delete(key)
+      } else {
+        params.set(key, trimmed)
+      }
+    }
+
+    setOrDelete('q', searchQuery)
+    setOrDelete('instrument', filterInstrument, 'Todos')
+    setOrDelete('city', filterCiudad)
+    setOrDelete('estado', filterEstado, 'Todos')
+
+    const next = params.toString()
+    const current = window.location.search.replace(/^\?/, '')
+    if (next === current) return
+    const target = next ? `?${next}` : window.location.pathname
+    window.history.replaceState(window.history.state, '', target)
+  }, [searchQuery, filterInstrument, filterCiudad, filterEstado])
 
   const filteredPosts = useMemo(
     () =>
@@ -129,71 +234,74 @@ export default function Home() {
     }
   }, [])
 
-  // Actualizar posts cuando cambia el feed activo
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userPosts = JSON.parse(localStorage.getItem('userPosts') || '[]')
-      
-      let basePosts: MockPost[] = []
-      switch (activeFeed) {
-        case 'general':
-          basePosts = GENERAL_POSTS
-          break
-        case 'descubrir':
-          basePosts = DESCUBRIR_POSTS
-          break
-        case 'conectar':
-          basePosts = CONECTAR_POSTS
-          break
-        case 'aprender':
-          basePosts = APRENDER_POSTS
-          break
+  const loadCurrentFeed = async () => {
+    if (activeFeed === 'general') {
+      const supabase = createClient()
+      if (selectedCommunity?.id) {
+        const { data: memberIds, error: membersError } = await listCommunityMemberIds(
+          supabase,
+          selectedCommunity.id
+        )
+        if (membersError) {
+          console.error('[Home] Error cargando miembros de comunidad', membersError)
+          setCurrentPosts([])
+          return
+        }
+        const { data, error } = await getFeedByUserIds(supabase, {
+          userIds: memberIds ?? [],
+          limit: 50,
+        })
+        if (error) {
+          console.error('[Home] Error cargando feed por comunidad', error)
+          setCurrentPosts([])
+          return
+        }
+        const mapped = ((data ?? []) as Array<
+          FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })
+        >).map(mapFeedRowToPost)
+        setCurrentPosts(mapped)
+        return
       }
-
-      // Filtrar posts del usuario según el feed activo
-      const filteredUserPosts = userPosts.filter((post: MockPost) => 
-        post.feedType === activeFeed || (activeFeed === 'general' && (!post.feedType || post.feedType === 'general'))
-      )
-      
-      setCurrentPosts([...filteredUserPosts, ...basePosts])
+      const { data, error } = await getFeed(supabase, { limit: 50 })
+      if (error) {
+        console.error('[Home] Error cargando posts', error)
+        setCurrentPosts(GENERAL_POSTS)
+        return
+      }
+      const mapped = ((data ?? []) as Array<FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })>).map(mapFeedRowToPost)
+      setCurrentPosts(mapped)
+      return
     }
-  }, [activeFeed])
 
-  // Escuchar eventos de nueva publicación
+    switch (activeFeed) {
+      case 'descubrir':
+        setCurrentPosts(DESCUBRIR_POSTS)
+        break
+      case 'conectar':
+        setCurrentPosts(CONECTAR_POSTS)
+        break
+      case 'aprender':
+        setCurrentPosts(APRENDER_POSTS)
+        break
+      default:
+        setCurrentPosts(GENERAL_POSTS)
+        break
+    }
+  }
+
+  useEffect(() => {
+    void loadCurrentFeed()
+  }, [activeFeed, selectedCommunity?.id])
+
   useEffect(() => {
     const handleNewPost = () => {
-      if (typeof window !== 'undefined') {
-        const userPosts = JSON.parse(localStorage.getItem('userPosts') || '[]')
-        
-        let basePosts: MockPost[] = []
-        switch (activeFeed) {
-          case 'general':
-            basePosts = GENERAL_POSTS
-            break
-          case 'descubrir':
-            basePosts = DESCUBRIR_POSTS
-            break
-          case 'conectar':
-            basePosts = CONECTAR_POSTS
-            break
-          case 'aprender':
-            basePosts = APRENDER_POSTS
-            break
-        }
-
-        const filteredUserPosts = userPosts.filter((post: MockPost) => 
-          post.feedType === activeFeed || (activeFeed === 'general' && (!post.feedType || post.feedType === 'general'))
-        )
-        
-        setCurrentPosts([...filteredUserPosts, ...basePosts])
-      }
+      void loadCurrentFeed()
     }
-
     window.addEventListener('newPostCreated', handleNewPost)
     return () => {
       window.removeEventListener('newPostCreated', handleNewPost)
     }
-  }, [activeFeed])
+  }, [activeFeed, selectedCommunity?.id])
 
   const handleJam = (postId: string, usuario: string) => {
     if (!user) {
@@ -212,6 +320,61 @@ export default function Home() {
       title: "¡JAM enviado!",
       description: `Tu solicitud fue enviada a ${usuario}`,
     })
+  }
+
+  const handleEditPost = async (post: AppFeedPost) => {
+    if (!user?.id || post.user_id !== user.id) return
+    const nextDescription = window.prompt('Edita la descripción de tu publicación', post.texto || '')
+    if (nextDescription === null) return
+
+    const supabase = createClient()
+    const { error } = await updatePostDescription(supabase, {
+      postId: post.id,
+      userId: user.id,
+      description: nextDescription.trim() || null,
+    })
+
+    if (error) {
+      toast({
+        title: 'No se pudo editar',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    toast({
+      title: 'Publicación actualizada',
+      description: 'Los cambios se guardaron correctamente.',
+    })
+    await loadCurrentFeed()
+  }
+
+  const handleDeletePost = async (post: AppFeedPost) => {
+    if (!user?.id || post.user_id !== user.id) return
+    const confirmed = window.confirm('¿Seguro que quieres eliminar esta publicación?')
+    if (!confirmed) return
+
+    const supabase = createClient()
+    const { error } = await deletePost(supabase, {
+      postId: post.id,
+      userId: user.id,
+    })
+
+    if (error) {
+      toast({
+        title: 'No se pudo eliminar',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    toast({
+      title: 'Publicación eliminada',
+      description: 'Tu publicación fue eliminada del feed.',
+    })
+    await loadCurrentFeed()
   }
 
 
@@ -348,6 +511,19 @@ export default function Home() {
               </div>
 
               <div className="mx-auto max-w-3xl space-y-6 p-6 md:p-8">
+                {selectedCommunity && (
+                  <div className="rounded-xl border border-rolex/20 bg-white px-4 py-3 text-sm text-gray-700">
+                    Mostrando publicaciones de la comunidad{' '}
+                    <span className="font-semibold text-gray-900">{selectedCommunity.nombre}</span>.
+                    <button
+                      type="button"
+                      className="ml-2 font-semibold text-rolex underline"
+                      onClick={() => setSelectedCommunity(null)}
+                    >
+                      Ver todo
+                    </button>
+                  </div>
+                )}
                 {filteredPosts.length === 0 ? (
                   <div className="flex h-96 flex-col items-center justify-center text-center">
                     <Music className="mb-4 h-20 w-20 text-rolex/50" />
@@ -367,7 +543,14 @@ export default function Home() {
                   </div>
                 ) : (
                   filteredPosts.map((post) => (
-                    <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
+                    <FeedVideoCard
+                      key={post.id}
+                      post={post}
+                      onJam={handleJam}
+                      canManage={Boolean(user?.id && (post as AppFeedPost).user_id === user.id)}
+                      onEditPost={(p) => void handleEditPost(p as AppFeedPost)}
+                      onDeletePost={(p) => void handleDeletePost(p as AppFeedPost)}
+                    />
                   ))
                 )}
               </div>
@@ -385,7 +568,16 @@ export default function Home() {
           {desktopSideView === 'comunidades' && (
             <div className="mx-auto max-w-4xl p-6 md:p-8">
               <div className="h-[calc(100vh-8rem)] overflow-hidden rounded-2xl border border-rolex/20">
-                <ComunidadPanel />
+                <ComunidadPanel
+                  selectedCommunityId={selectedCommunity?.id ?? null}
+                  onSelectCommunity={(community) => {
+                    setSelectedCommunity(community)
+                    if (community) {
+                      setDesktopSideView('feed')
+                      setActiveFeed('general')
+                    }
+                  }}
+                />
               </div>
             </div>
           )}
@@ -524,7 +716,14 @@ export default function Home() {
                 </div>
               ) : (
                 filteredPosts.map((post) => (
-                  <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
+                  <FeedVideoCard
+                    key={post.id}
+                    post={post}
+                    onJam={handleJam}
+                    canManage={Boolean(user?.id && (post as AppFeedPost).user_id === user.id)}
+                    onEditPost={(p) => void handleEditPost(p as AppFeedPost)}
+                    onDeletePost={(p) => void handleDeletePost(p as AppFeedPost)}
+                  />
                 ))
               )}
             </div>

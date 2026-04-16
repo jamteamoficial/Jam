@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/src/lib/supabase/client'
 import { getLocalUserId } from '@/src/lib/localUser'
+import { countUnreadMessagesByConversation } from '@/src/lib/services/conversation-messages'
 
 type ChatTab = 'mensajes' | 'jams'
 
@@ -142,6 +143,11 @@ export default function ChatsPanel() {
         }
 
         const conversationIds = participants.map((p) => p.conversation_id)
+        const { data: unreadByConv } = await countUnreadMessagesByConversation(supabase, {
+          conversationIds,
+          readerId: myUserId,
+        })
+        const unreadMap = unreadByConv ?? {}
         const chatsData = await Promise.all(
           conversationIds.map(async (conversationId) => {
             const { data: lastMessage } = await supabase
@@ -171,8 +177,8 @@ export default function ChatsPanel() {
 
               if (otherUser) {
                 usuario =
-                  otherUser.username ||
                   otherUser.full_name ||
+                  otherUser.username ||
                   'Usuario'
                 avatar = otherUser.avatar_url || '🎸'
               }
@@ -189,7 +195,7 @@ export default function ChatsPanel() {
                     minute: '2-digit',
                   })
                 : '',
-              mensajesNoLeidos: 0,
+              mensajesNoLeidos: unreadMap[conversationId] ?? 0,
               lastMessageDate: lastMessage?.created_at || new Date(0).toISOString(),
             }
           })

@@ -6,6 +6,7 @@ import { ArrowLeft, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
 import { supabase } from '@/src/lib/supabase/client'
+import { markIncomingMessagesRead } from '@/src/lib/services/conversation-messages'
 
 interface Message {
   id: string
@@ -110,9 +111,6 @@ export default function ChatPage() {
   const { user } = useAuth()
   const conversationId = params?.id as string
 
-  console.log("params:", params)
-  console.log("conversationId:", conversationId)
-
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [exists, setExists] = useState<boolean | null>(null)
@@ -179,15 +177,11 @@ export default function ChatPage() {
       }
 
       // Si no es mock, buscar en Supabase
-      console.log("Consultando conversations con id:", conversationId)
-
       const { data, error } = await supabase
         .from("conversations")
         .select("id")
         .eq("id", conversationId)
         .single()
-
-      console.log("Respuesta conversations:", { data, error })
 
       if (error) {
         // Muy común: RLS o permisos
@@ -228,11 +222,26 @@ export default function ChatPage() {
         .order('created_at', { ascending: true })
 
       if (error) {
-        console.log('Error cargando mensajes:', error)
         return
       }
 
-      setMessages(data ?? [])
+      const rows = data ?? []
+      setMessages(rows)
+
+      const {
+        data: { user: reader },
+      } = await supabase.auth.getUser()
+      if (reader?.id && rows.length > 0) {
+        await markIncomingMessagesRead(supabase, {
+          conversationId,
+          readerId: reader.id,
+        })
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.sender_id !== reader.id ? { ...m, is_read: true } : m
+          )
+        )
+      }
 
       // Cargar información del otro participante (opcional, para UI)
       try {
@@ -258,8 +267,8 @@ export default function ChatPage() {
 
               if (otherUser) {
                 otherUserName =
-                  otherUser.username ||
                   otherUser.full_name ||
+                  otherUser.username ||
                   'Usuario'
                 otherUserAvatar = otherUser.avatar_url || '🎸'
               }
@@ -297,10 +306,43 @@ export default function ChatPage() {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
+          const row = payload.new as { id?: string; sender_id?: string }
           setMessages((prev) => {
-            if (prev.find((m) => m.id === payload.new.id)) return prev
+            if (row.id && prev.find((m) => m.id === row.id)) return prev
             return [...prev, payload.new]
           })
+          void (async () => {
+            const {
+              data: { user: u },
+            } = await supabase.auth.getUser()
+            if (u?.id && row.sender_id && row.sender_id !== u.id) {
+              await markIncomingMessagesRead(supabase, {
+                conversationId,
+                readerId: u.id,
+              })
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.sender_id !== u.id ? { ...m, is_read: true } : m
+                )
+              )
+            }
+          })()
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const row = payload.new as { id?: string }
+          if (!row?.id) return
+          setMessages((prev) =>
+            prev.map((m) => (m.id === row.id ? { ...m, ...payload.new } : m))
+          )
         }
       )
       .subscribe()
@@ -358,10 +400,10 @@ export default function ChatPage() {
       conversation_id: conversationId,
       sender_id: senderId,
       content,
+      is_read: false,
     })
 
     if (error) {
-      console.log('Error enviando mensaje:', error)
       return
     }
 
@@ -456,12 +498,23 @@ export default function ChatPage() {
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                  <p className={`text-xs mt-1 ${isUser ? 'text-white/80' : 'text-gray-500'}`}>
-                    {new Date(message.created_at).toLocaleTimeString('es-CL', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
+                  <div
+                    className={`mt-1 flex items-center justify-end gap-2 text-xs ${
+                      isUser ? 'text-white/80' : 'text-gray-500'
+                    }`}
+                  >
+                    <span>
+                      {new Date(message.created_at).toLocaleTimeString('es-CL', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                    {isUser && !conversationId?.startsWith('mock-') && (
+                      <span className="font-medium opacity-90">
+                        {message.is_read ? 'Visto' : 'Entregado'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             )

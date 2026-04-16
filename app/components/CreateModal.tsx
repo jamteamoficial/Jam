@@ -5,8 +5,9 @@ import { X, Music, Video, Type, Upload, FileVideo } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import { useAuth } from '@/app/context/AuthContext'
-import { useRouter } from 'next/navigation'
 import { uploadVideo } from '@/src/lib/hooks/useVideoUpload'
+import { createClient } from '@/src/lib/supabase/client'
+import { createPost } from '@/src/lib/services/jam-social'
 
 interface CreateModalProps {
   isOpen: boolean
@@ -18,7 +19,6 @@ const MAX_FILE_SIZE = 30 * 1024 * 1024 // 30MB en bytes
 export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
   const { toast } = useToast()
   const { user } = useAuth()
-  const router = useRouter()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [contentType, setContentType] = useState<'mensaje' | 'video'>('mensaje')
   const [feedType, setFeedType] = useState<'descubrir' | 'conectar' | 'aprender' | null>(null)
@@ -146,46 +146,26 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
         }
       }
 
-      // Obtener publicaciones existentes de localStorage
-      const existingPosts = JSON.parse(localStorage.getItem('userPosts') || '[]')
-      
-      // Crear datos base de la publicación
-      const postData = {
-        id: Date.now().toString(),
-        usuario: user.nombreCompleto || user.username || 'Usuario',
-        instrumento: 'Músico',
-        estilo: 'Varios',
-        ciudad: 'Santiago',
-        texto: contentType === 'mensaje' ? text : '',
-        avatar: '🎵',
-        tipo: contentType === 'video' ? 'video' : 'compartir',
-        video_url: contentType === 'video' ? (videoUrl || null) : null,
-        createdAt: new Date().toISOString()
-      }
-      console.log('Objeto postData a guardar:', postData)
+      const supabase = createClient()
+      const description = text.trim() || null
+      const finalVideoUrl =
+        contentType === 'video'
+          ? (videoUrl ?? '')
+          : 'https://www.w3schools.com/html/mov_bbb.mp4'
+      const { error } = await createPost(supabase, {
+        video_url: finalVideoUrl,
+        description,
+      })
 
-      // Siempre crear publicación en General
-      const generalPost = {
-        ...postData,
-        feedType: 'general'
+      if (error) {
+        throw error
       }
-      existingPosts.unshift(generalPost)
-
-      // Si se seleccionó otro feed, también crear una copia para ese feed
-      if (feedType) {
-        const additionalPost = {
-          ...postData,
-          id: `${postData.id}_${feedType}`, // ID único para la copia
-          feedType: feedType
-        }
-        existingPosts.unshift(additionalPost)
-      }
-
-      localStorage.setItem('userPosts', JSON.stringify(existingPosts))
 
       toast({
         title: "¡Publicación creada!",
-        description: contentType === 'video' ? 'Tu video ha sido publicado' : 'Tu mensaje ha sido publicado',
+        description: contentType === 'video'
+          ? 'Tu video ha sido publicado en el feed general'
+          : 'Tu publicación ha sido guardada en el feed general',
       })
       
       // Limpiar formulario

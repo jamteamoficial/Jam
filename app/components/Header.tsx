@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 import { Music, User, LogIn, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import GoogleLogin from '../../components/GoogleLogin'
+import NotificationsBell from '@/app/components/NotificationsBell'
 import { createClient } from '@/src/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
@@ -17,9 +18,12 @@ interface HeaderProps {
 
 export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { logout: authContextLogout } = useAuth()
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [headerQuery, setHeaderQuery] = useState('')
   const headerSearchRef = useRef<HTMLInputElement>(null)
 
   const supabase = useMemo(() => createClient(), [])
@@ -51,6 +55,33 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
     router.push('/')
   }
 
+  useEffect(() => {
+    const q = searchParams.get('q') ?? ''
+    setHeaderQuery(q)
+  }, [searchParams])
+
+  const applyGlobalSearch = (rawValue: string) => {
+    const value = rawValue.trim()
+    const params = new URLSearchParams(pathname === '/' ? searchParams.toString() : '')
+    if (value) params.set('q', value)
+    else params.delete('q')
+    const qs = params.toString()
+    const target = qs ? `/?${qs}` : '/'
+    router.replace(target)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('global-search-changed', { detail: { q: value } }))
+    }
+  }
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      // Si no estamos en home y no hay término, evitamos navegación innecesaria.
+      if (pathname !== '/' && headerQuery.trim().length === 0) return
+      applyGlobalSearch(headerQuery)
+    }, 380)
+    return () => window.clearTimeout(t)
+  }, [headerQuery, pathname, searchParams])
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-rolex/30 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -79,10 +110,13 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
               <input
                 ref={headerSearchRef}
                 type="search"
+                value={headerQuery}
+                onChange={(e) => setHeaderQuery(e.target.value)}
                 placeholder="Buscar músicos, bandas..."
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault()
+                    applyGlobalSearch(headerQuery)
                     headerSearchRef.current?.blur()
                   }
                 }}
@@ -95,7 +129,10 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                 aria-label="Confirmar búsqueda"
                 className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-sm transition hover:opacity-90 active:scale-95"
                 style={{ backgroundColor: 'var(--rolex)' }}
-                onClick={() => headerSearchRef.current?.blur()}
+                onClick={() => {
+                  applyGlobalSearch(headerQuery)
+                  headerSearchRef.current?.blur()
+                }}
               >
                 <Search className="h-4 w-4" strokeWidth={2.5} />
               </button>
@@ -129,6 +166,8 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                 </Button>
 
                 {isAuthenticated ? (
+                  <>
+                    <NotificationsBell />
                   <Button 
                     variant="outline" 
                     onClick={handleLogout}
@@ -138,6 +177,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                     <LogOut className="w-4 h-4" />
                     <span className="hidden sm:inline">Cerrar sesión</span>
                   </Button>
+                  </>
                 ) : (
                   <Button
                     onClick={onLoginClick}
