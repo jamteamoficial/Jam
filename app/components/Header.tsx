@@ -52,8 +52,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   const avatarFallback = (supabaseUser?.email?.[0] || 'U').toUpperCase()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    authContextLogout()
+    await authContextLogout()
     router.push('/')
   }
 

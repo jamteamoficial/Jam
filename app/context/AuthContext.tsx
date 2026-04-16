@@ -222,18 +222,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    localStorage.removeItem('user')
-    localStorage.removeItem('isAuthenticated')
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user')
+      localStorage.removeItem('isAuthenticated')
+    }
     setUser(null)
     setIsAuthenticated(false)
     try {
       const supabase = createClient()
-      await supabase.auth.signOut()
+      await supabase.auth.signOut({ scope: 'global' })
     } catch {
       // Ignorar si no hay sesión Supabase
-    }
-    if (typeof window !== 'undefined') {
-      window.location.reload()
     }
   }
 
