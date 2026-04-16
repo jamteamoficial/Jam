@@ -10,6 +10,39 @@ import { useAuth } from '@/app/context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import PostActions from '@/app/components/PostActions'
 import { GENERAL_POSTS, DESCUBRIR_POSTS, CONECTAR_POSTS, APRENDER_POSTS, type MockPost } from '@/app/data/mockPosts'
+import { createClient } from '@/src/lib/supabase/client'
+
+function isProfileUuid(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+}
+
+function mapSupabaseProfileRow(row: Record<string, unknown>): UserProfile {
+  const instrumentos = Array.isArray(row.instrumentos) ? (row.instrumentos as string[]) : []
+  const email = (row.email as string) || ''
+  const username = (row.username as string) || email.split('@')[0] || 'usuario'
+  const fullName = (row.full_name as string)?.trim()
+  const displayArtistic = username.includes('_')
+    ? fullName || username.replace(/_[a-f0-9]+$/i, '') || username
+    : username
+  const avatarRaw = (row.avatar_url as string) || '🎵'
+  return {
+    id: row.id as string,
+    nombre: fullName || displayArtistic,
+    nombreArtistico: displayArtistic,
+    avatar: avatarRaw,
+    instrumento: instrumentos[0] || 'Músico',
+    estilo: instrumentos[1] || 'Varios',
+    ciudad: (row.ciudad as string) || '—',
+    bio: (row.bio as string) || 'Sin descripción aún.',
+    seguidores: 0,
+    seguidos: 0,
+    nivelMusical: '—',
+    instrumentos: instrumentos.length > 0 ? instrumentos : ['—'],
+    estilos: [],
+    contactoWhatsapp: undefined,
+    contactoInstagram: undefined,
+  }
+}
 
 interface UserProfile {
   id: string
@@ -455,13 +488,38 @@ export default function UsuarioProfilePage() {
   const { user, followUser, unfollowUser, isFollowing } = useAuth()
   const { toast } = useToast()
   const userId = decodeURIComponent(params.id as string)
+  const isUuid = isProfileUuid(userId)
+  const [remoteProfile, setRemoteProfile] = useState<UserProfile | null | undefined>(undefined)
   const [userPosts, setUserPosts] = useState<MockPost[]>([])
   const [totalLikes, setTotalLikes] = useState(0)
   const [following, setFollowing] = useState(false)
 
-  // Buscar perfil del usuario - buscar por nombre artístico exacto o por ID
-  // Primero buscar directamente por la clave del objeto, luego por nombre artístico
-  const userProfile = React.useMemo(() => {
+  useEffect(() => {
+    if (!isUuid) {
+      setRemoteProfile(null)
+      return
+    }
+    let cancelled = false
+    setRemoteProfile(undefined)
+    ;(async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
+      if (cancelled) return
+      if (error || !data) {
+        setRemoteProfile(null)
+        return
+      }
+      setRemoteProfile(mapSupabaseProfileRow(data as Record<string, unknown>))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [userId, isUuid])
+
+  // Perfil demo / legacy (no UUID): mock y posts locales
+  const mockProfile = React.useMemo(() => {
+    if (isUuid) return null
+
     // Buscar directamente por clave
     if (mockProfiles[userId]) {
       return mockProfiles[userId]
@@ -504,7 +562,9 @@ export default function UsuarioProfilePage() {
     }
     
     return null
-  }, [userId])
+  }, [userId, isUuid])
+
+  const userProfile = isUuid ? remoteProfile : mockProfile
 
   useEffect(() => {
     if (userProfile) {
@@ -602,6 +662,14 @@ export default function UsuarioProfilePage() {
     })
   }
 
+  if (isUuid && remoteProfile === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <p className="text-gray-600">Cargando perfil…</p>
+      </div>
+    )
+  }
+
   if (!userProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center">
@@ -640,8 +708,16 @@ export default function UsuarioProfilePage() {
         {/* Perfil Header */}
         <div className="bg-white rounded-2xl shadow-lg border-2 border-rolex/30 p-8 mb-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="w-32 h-32 rounded-full bg-rolex flex items-center justify-center text-6xl flex-shrink-0">
-              {userProfile.avatar}
+            <div className="flex h-32 w-32 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-rolex text-6xl">
+              {/^https?:\/\//i.test(userProfile.avatar) ? (
+                <img
+                  src={userProfile.avatar}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                userProfile.avatar
+              )}
             </div>
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">{userProfile.nombreArtistico}</h1>

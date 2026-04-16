@@ -165,13 +165,16 @@ export default function ChatsPanel() {
             if (otherParticipant) {
               const { data: otherUser } = await supabase
                 .from('profiles')
-                .select('username, avatar')
+                .select('username, full_name, avatar_url')
                 .eq('id', otherParticipant.user_id)
                 .single()
 
               if (otherUser) {
-                usuario = otherUser.username || 'Usuario'
-                avatar = otherUser.avatar || '🎸'
+                usuario =
+                  otherUser.username ||
+                  otherUser.full_name ||
+                  'Usuario'
+                avatar = otherUser.avatar_url || '🎸'
               }
             }
 

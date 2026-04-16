@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
+import { Search, SlidersHorizontal, X, User } from 'lucide-react'
+
+import { searchProfiles, type ProfileSearchRow } from '@/src/lib/supabase/searchUsers'
 
 export const INSTRUMENT_FILTERS = [
   'Todos',
@@ -33,6 +36,8 @@ interface FeedToolbarProps {
   estado: string
   onEstadoChange: (v: string) => void
   onClearFilters: () => void
+  /** Si hay sesión, se pueden buscar perfiles reales en Supabase */
+  isAuthenticated?: boolean
 }
 
 export default function FeedToolbar({
@@ -45,10 +50,43 @@ export default function FeedToolbar({
   estado,
   onEstadoChange,
   onClearFilters,
+  isAuthenticated = false,
 }: FeedToolbarProps) {
   const [open, setOpen] = useState(false)
+  const [peopleResults, setPeopleResults] = useState<ProfileSearchRow[]>([])
+  const [peopleLoading, setPeopleLoading] = useState(false)
+  const [peopleError, setPeopleError] = useState<string | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const hasActiveFilters =
     instrument !== 'Todos' || estado !== 'Todos' || ciudad.trim() !== ''
+
+  useEffect(() => {
+    if (!isAuthenticated || !open) {
+      setPeopleResults([])
+      setPeopleError(null)
+      return
+    }
+    const q = searchQuery.trim()
+    if (q.length < 2) {
+      setPeopleResults([])
+      setPeopleError(null)
+      return
+    }
+    const t = window.setTimeout(() => {
+      setPeopleLoading(true)
+      setPeopleError(null)
+      void searchProfiles(q).then(({ data, error }) => {
+        setPeopleLoading(false)
+        if (error) {
+          setPeopleError(error.message)
+          setPeopleResults([])
+          return
+        }
+        setPeopleResults(data ?? [])
+      })
+    }, 380)
+    return () => window.clearTimeout(t)
+  }, [searchQuery, isAuthenticated, open])
 
   return (
     <div className="border-b border-rolex/15 bg-white/90 px-3 py-3 backdrop-blur-md md:px-4">
@@ -89,16 +127,82 @@ export default function FeedToolbar({
               Buscar
             </label>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <input
+                ref={searchInputRef}
                 type="search"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Buscar por usuario, texto o ciudad…"
-                className="w-full rounded-xl border-2 border-rolex/20 py-2.5 pl-10 pr-4 text-sm outline-none transition focus:border-rolex focus:ring-2 focus:ring-rolex/20"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    searchInputRef.current?.blur()
+                  }
+                }}
+                placeholder="Publicaciones, ciudad en posts…"
+                className="w-full rounded-xl border-2 border-rolex/20 py-2.5 pl-10 pr-12 text-sm outline-none transition focus:border-rolex focus:ring-2 focus:ring-rolex/20"
                 aria-label="Buscar en el feed"
               />
+              <button
+                type="button"
+                title="Buscar"
+                aria-label="Confirmar búsqueda"
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-white shadow-sm transition hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: 'var(--rolex)' }}
+                onClick={() => searchInputRef.current?.blur()}
+              >
+                <Search className="h-4 w-4" strokeWidth={2.5} />
+              </button>
             </div>
+            {isAuthenticated ? (
+              <div className="mt-4 border-t border-rolex/15 pt-4">
+                <p className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-gray-500">
+                  <User className="h-3.5 w-3.5" />
+                  Personas (cuentas reales)
+                </p>
+                <p className="mb-2 text-xs text-gray-500">
+                  Escribe al menos 2 caracteres para buscar por nombre, correo, usuario o biografía.
+                </p>
+                {peopleLoading && (
+                  <p className="text-sm text-gray-500">Buscando personas…</p>
+                )}
+                {peopleError && (
+                  <p className="text-sm text-amber-700" role="alert">
+                    {peopleError.includes('relation') || peopleError.includes('column')
+                      ? 'Configura la tabla profiles en Supabase (migración 002) o revisa tu conexión.'
+                      : peopleError}
+                  </p>
+                )}
+                {!peopleLoading && searchQuery.trim().length >= 2 && peopleResults.length === 0 && !peopleError && (
+                  <p className="text-sm text-gray-500">No hay usuarios que coincidan.</p>
+                )}
+                <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto">
+                  {peopleResults.map((p) => {
+                    const label =
+                      p.full_name?.trim() ||
+                      p.username?.replace(/_[a-f0-9]{10}$/i, '') ||
+                      p.email?.split('@')[0] ||
+                      'Usuario'
+                    const sub = [p.username, p.email].filter(Boolean).join(' · ')
+                    return (
+                      <li key={p.id}>
+                        <Link
+                          href={`/usuario/${encodeURIComponent(p.id)}`}
+                          className="flex flex-col rounded-lg border border-rolex/15 bg-rolex/5 px-3 py-2 text-left text-sm transition hover:bg-rolex/10"
+                        >
+                          <span className="font-semibold text-gray-900">{label}</span>
+                          {sub && <span className="truncate text-xs text-gray-500">{sub}</span>}
+                        </Link>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ) : (
+              <p className="mt-3 text-xs text-gray-500">
+                Inicia sesión para buscar perfiles de otros músicos.
+              </p>
+            )}
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <div>

@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
+import { syncProfileToSupabase } from '@/src/lib/supabase/syncProfileToSupabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save } from 'lucide-react'
@@ -129,6 +130,26 @@ function PerfilContent() {
       // Guardar en localStorage
       const profileKey = `profile_${user.id || user.email}`
       localStorage.setItem(profileKey, JSON.stringify(formData))
+
+      if (user.id) {
+        const { error: syncErr } = await syncProfileToSupabase(
+          user.id,
+          user.email,
+          formData,
+          user.username
+        )
+        if (syncErr) {
+          console.error('[perfil] Supabase:', syncErr)
+          toast({
+            title: 'No se pudo guardar en el servidor',
+            description:
+              'Ejecuta la migración 002 en Supabase (SQL) o revisa la consola. Los datos quedaron solo en este dispositivo.',
+            variant: 'destructive',
+          })
+          setLoading(false)
+          return
+        }
+      }
 
       toast({
         title: "¡Perfil guardado!",

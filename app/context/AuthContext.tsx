@@ -1,7 +1,10 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import type { User as SupabaseAuthUser } from '@supabase/supabase-js'
+
 import { createClient } from '@/src/lib/supabase/client'
+import { ensurePublicProfileFromAuth } from '@/src/lib/supabase/ensurePublicProfile'
 
 export interface ProfileData {
   nombreCompleto: string
@@ -67,17 +70,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const supabase = createClient()
 
-    const syncFromSupabase = async (supabaseUser: { id: string; email?: string; user_metadata?: { full_name?: string; name?: string } }) => {
+    const syncFromSupabase = async (supabaseUser: SupabaseAuthUser) => {
       const userData: User = {
         id: supabaseUser.id,
         email: supabaseUser.email || `${supabaseUser.id}@jam.local`,
         username: supabaseUser.email?.split('@')[0] || supabaseUser.id.slice(0, 8),
-        nombreCompleto: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || 'Usuario'
+        nombreCompleto:
+          supabaseUser.user_metadata?.full_name ||
+          supabaseUser.user_metadata?.name ||
+          'Usuario',
       }
       localStorage.setItem('user', JSON.stringify(userData))
       localStorage.setItem('isAuthenticated', 'true')
       setUser(userData)
       setIsAuthenticated(true)
+
+      void ensurePublicProfileFromAuth(supabaseUser).catch(() => {
+        /* tabla profiles o RLS: se ignora para no bloquear la UI */
+      })
     }
 
     const initAuth = async () => {

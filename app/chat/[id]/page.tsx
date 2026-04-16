@@ -252,13 +252,16 @@ export default function ChatPage() {
             try {
               const { data: otherUser } = await supabase
                 .from('profiles')
-                .select('username, avatar')
+                .select('username, full_name, avatar_url')
                 .eq('id', otherParticipant.user_id)
                 .single()
 
               if (otherUser) {
-                otherUserName = otherUser.username || 'Usuario'
-                otherUserAvatar = otherUser.avatar || '🎸'
+                otherUserName =
+                  otherUser.username ||
+                  otherUser.full_name ||
+                  'Usuario'
+                otherUserAvatar = otherUser.avatar_url || '🎸'
               }
             } catch (error) {
               // Usar valores por defecto si no hay perfil

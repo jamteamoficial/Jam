@@ -343,6 +343,7 @@ export default function Home() {
                   estado={filterEstado}
                   onEstadoChange={setFilterEstado}
                   onClearFilters={clearFilters}
+                  isAuthenticated={isAuthenticated}
                 />
               </div>
 
@@ -508,6 +509,7 @@ export default function Home() {
                 estado={filterEstado}
                 onEstadoChange={setFilterEstado}
                 onClearFilters={clearFilters}
+                isAuthenticated={isAuthenticated}
               />
             </div>
             <div className="space-y-4 p-4">

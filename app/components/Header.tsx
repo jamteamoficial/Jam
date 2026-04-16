@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
@@ -20,6 +20,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   const { logout: authContextLogout } = useAuth()
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const headerSearchRef = useRef<HTMLInputElement>(null)
 
   const supabase = useMemo(() => createClient(), [])
 
@@ -72,14 +73,32 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
           </Link>
 
           {/* Barra de búsqueda - Centro */}
-          <div className="flex-1 max-w-md mx-4 hidden md:block">
+          <div className="mx-4 hidden max-w-md flex-1 md:block">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
               <input
-                type="text"
+                ref={headerSearchRef}
+                type="search"
                 placeholder="Buscar músicos, bandas..."
-                className="w-full pl-10 pr-4 py-2 border-2 border-rolex/30 rounded-full focus:outline-none focus:ring-2 focus:ring-rolex focus:border-transparent"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    headerSearchRef.current?.blur()
+                  }
+                }}
+                className="w-full rounded-full border-2 border-rolex/30 py-2 pl-10 pr-12 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-rolex"
+                aria-label="Buscar en JAM"
               />
+              <button
+                type="button"
+                title="Buscar"
+                aria-label="Confirmar búsqueda"
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-white shadow-sm transition hover:opacity-90 active:scale-95"
+                style={{ backgroundColor: 'var(--rolex)' }}
+                onClick={() => headerSearchRef.current?.blur()}
+              >
+                <Search className="h-4 w-4" strokeWidth={2.5} />
+              </button>
             </div>
           </div>
 
