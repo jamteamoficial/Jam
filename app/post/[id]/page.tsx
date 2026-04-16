@@ -1,189 +1,160 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import Header from '../../components/Header'
-import { useAuth } from '../../context/AuthContext'
 
-interface PostData {
+import Header from '@/app/components/Header'
+import PostActions from '@/app/components/PostActions'
+import { Button } from '@/components/ui/button'
+import { useAuth } from '@/app/context/AuthContext'
+import { useToast } from '@/src/lib/hooks/use-toast'
+import { createClient } from '@/src/lib/supabase/client'
+import { createComment, getCommentsByPost, type PostCommentRow } from '@/src/lib/services/jam-social'
+import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
+
+type PostRow = {
   id: string
-  name: string
-  username: string
-  avatar: string
-  content: string
-  likes: number
-  comments: number
-  commentPreview?: string
-  commenter?: string
+  user_id: string
+  video_url: string
+  description: string | null
+  created_at: string
+  profiles: {
+    id: string
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+  } | null
 }
 
-interface Comment {
-  id: string
-  username: string
-  name: string
-  avatar: string
-  content: string
-  timestamp: number
+function normalizePostRow(row: any): PostRow {
+  const profiles = Array.isArray(row?.profiles) ? row.profiles[0] : row?.profiles
+  return { ...row, profiles } as PostRow
+}
+
+function normalizeCommentRow(row: any): PostCommentRow {
+  const profiles = Array.isArray(row?.profiles) ? row.profiles[0] : row?.profiles
+  return { ...row, profiles } as PostCommentRow
 }
 
 export default function PostDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
-  const postId = params.id as string
-  const [post, setPost] = useState<PostData | null>(null)
-  const [likes, setLikes] = useState(0)
-  const [liked, setLiked] = useState(false)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [newComment, setNewComment] = useState('')
-  const [showComments, setShowComments] = useState(true)
+  const { toast } = useToast()
+
+  const postId = String(params.id ?? '')
+
   const [loading, setLoading] = useState(true)
+  const [post, setPost] = useState<PostRow | null>(null)
+  const [comments, setComments] = useState<PostCommentRow[]>([])
+  const [commentText, setCommentText] = useState('')
+
+  const author = useMemo(() => {
+    if (!post?.profiles) return null
+    const name = getDisplayName(post.profiles.full_name, post.profiles.username || 'usuario')
+    const handle = getHandle(post.profiles.username || 'usuario')
+    return { name, handle, avatarUrl: post.profiles.avatar_url }
+  }, [post])
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedPosts = localStorage.getItem('posts')
-      if (savedPosts) {
-        try {
-          const allPosts: PostData[] = JSON.parse(savedPosts)
-          const foundPost = allPosts.find(p => p.id === postId)
-          if (foundPost) {
-            setPost(foundPost)
-            setLikes(foundPost.likes || 0)
-            
-            // Verificar si el usuario ya dio like
-            const likedPosts = localStorage.getItem('likedPosts')
-            if (likedPosts) {
-              try {
-                const liked: string[] = JSON.parse(likedPosts)
-                setLiked(liked.includes(postId))
-              } catch (error) {
-                console.error('Error al leer likes:', error)
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error al cargar post:', error)
-        }
+    let cancelled = false
+    ;(async () => {
+      if (!postId) {
+        setLoading(false)
+        return
       }
 
-      // Cargar comentarios
-      const savedComments = localStorage.getItem(`comments_${postId}`)
-      if (savedComments) {
-        try {
-          const parsedComments: Comment[] = JSON.parse(savedComments)
-          setComments(parsedComments)
-        } catch (error) {
-          console.error('Error al cargar comentarios:', error)
-        }
+      setLoading(true)
+      const supabase = createClient()
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select(
+          `
+          id,
+          user_id,
+          video_url,
+          description,
+          created_at,
+          profiles (
+            id,
+            username,
+            full_name,
+            avatar_url
+          )
+        `
+        )
+        .eq('id', postId)
+        .maybeSingle()
+
+      if (cancelled) return
+
+      if (error || !data) {
+        setPost(null)
+        setComments([])
+        setLoading(false)
+        return
+      }
+
+      setPost(normalizePostRow(data))
+
+      const { data: commentRows, error: commentsError } = await getCommentsByPost(supabase, postId, { limit: 50 })
+      if (!commentsError) {
+        setComments(((commentRows ?? []) as any[]).map(normalizeCommentRow))
+      } else {
+        setComments([])
       }
 
       setLoading(false)
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [postId])
 
-  const handleLike = () => {
-    if (!post) return
-
-    const likedPosts = localStorage.getItem('likedPosts')
-    let likedList: string[] = []
-    
-    if (likedPosts) {
-      try {
-        likedList = JSON.parse(likedPosts)
-      } catch (error) {
-        console.error('Error al leer likes:', error)
-      }
-    }
-
-    if (liked) {
-      // Quitar like
-      setLiked(false)
-      setLikes(likes - 1)
-      const updatedLiked = likedList.filter(id => id !== postId)
-      localStorage.setItem('likedPosts', JSON.stringify(updatedLiked))
-    } else {
-      // Agregar like
-      setLiked(true)
-      setLikes(likes + 1)
-      if (!likedList.includes(postId)) {
-        likedList.push(postId)
-        localStorage.setItem('likedPosts', JSON.stringify(likedList))
-      }
-    }
-
-    // Actualizar likes en el post
-    const savedPosts = localStorage.getItem('posts')
-    if (savedPosts) {
-      try {
-        const allPosts: PostData[] = JSON.parse(savedPosts)
-        const postIndex = allPosts.findIndex(p => p.id === postId)
-        if (postIndex >= 0) {
-          allPosts[postIndex].likes = liked ? likes - 1 : likes + 1
-          localStorage.setItem('posts', JSON.stringify(allPosts))
-        }
-      } catch (error) {
-        console.error('Error al actualizar likes:', error)
-      }
-    }
-  }
-
-  const handleComment = (e: React.FormEvent) => {
+  const submitComment = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!newComment.trim() || !user || !post) return
-
-    const comment: Comment = {
-      id: Date.now().toString(),
-      username: user.username,
-      name: user.nombreCompleto,
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop',
-      content: newComment,
-      timestamp: Date.now()
+    const text = commentText.trim()
+    if (!text) return
+    if (!user?.id) {
+      router.push('/login')
+      return
     }
 
-    const updatedComments = [comment, ...comments]
-    setComments(updatedComments)
-    localStorage.setItem(`comments_${postId}`, JSON.stringify(updatedComments))
-
-    // Actualizar contador de comentarios en el post
-    const savedPosts = localStorage.getItem('posts')
-    if (savedPosts) {
-      try {
-        const allPosts: PostData[] = JSON.parse(savedPosts)
-        const postIndex = allPosts.findIndex(p => p.id === postId)
-        if (postIndex >= 0) {
-          allPosts[postIndex].comments = updatedComments.length
-          localStorage.setItem('posts', JSON.stringify(allPosts))
-        }
-      } catch (error) {
-        console.error('Error al actualizar comentarios:', error)
-      }
+    const supabase = createClient()
+    const { error } = await createComment(supabase, { postId, content: text })
+    if (error) {
+      toast({
+        title: 'No se pudo comentar',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
     }
 
-    setNewComment('')
+    setCommentText('')
+    const { data } = await getCommentsByPost(supabase, postId, { limit: 50 })
+    setComments(((data ?? []) as any[]).map(normalizeCommentRow))
   }
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-gray-600">Cargando post...</p>
-        </div>
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-emerald-100">
+        <p className="text-xl text-gray-600">Cargando publicación…</p>
       </main>
     )
   }
 
-  if (!post) {
+  if (!post || !author) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 p-8">
+      <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
         <Header />
-        <div className="max-w-4xl mx-auto mt-8">
-          <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Post no encontrado</h1>
-            <Link 
-              href="/"
-              className="inline-block px-6 py-2 bg-rolex text-white rounded-lg hover:bg-rolex-light transition-colors font-semibold"
-            >
+        <div className="mx-auto mt-10 max-w-3xl px-6">
+          <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-xl">
+            <h1 className="mb-3 text-2xl font-bold text-gray-900">Publicación no encontrada</h1>
+            <Link href="/" className="inline-block rounded-lg bg-rolex px-6 py-2 font-semibold text-white hover:bg-rolex-light">
               Volver al inicio
             </Link>
           </div>
@@ -195,153 +166,87 @@ export default function PostDetailPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
       <Header />
-      
-      <div className="max-w-4xl mx-auto p-8">
+
+      <div className="mx-auto max-w-3xl px-6 py-10">
         <div className="mb-6">
-          <Link 
-            href={`/user/${post.username}`}
-            className="inline-flex items-center space-x-2 text-rolex hover:text-rolex-dark font-semibold"
-          >
+          <Link href={`/usuario/${post.user_id}`} className="inline-flex items-center gap-2 font-semibold text-rolex hover:text-rolex-dark">
             <span>←</span>
             <span>Volver al perfil</span>
           </Link>
         </div>
 
-        {/* Post completo */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100 mb-6">
-          <div className="flex items-start space-x-4 mb-6">
-            <Link href={`/user/${post.username}`}>
-              <img 
-                src={post.avatar} 
-                alt={post.name} 
-                className="w-16 h-16 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
-              />
-            </Link>
-            <div className="flex-1">
-              <Link href={`/user/${post.username}`} className="hover:opacity-80 transition-opacity">
-                <h2 className="text-2xl font-bold text-gray-900 mb-1">{post.name}</h2>
-                <p className="text-gray-600">@{post.username}</p>
-              </Link>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <p className="text-xl text-gray-800 leading-relaxed">{post.content}</p>
-          </div>
-
-          {/* Acciones */}
-          <div className="flex items-center space-x-6 border-t border-gray-200 pt-4">
-            <button
-              onClick={handleLike}
-              className={`flex items-center space-x-2 font-semibold transition-colors ${
-                liked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
-              }`}
-            >
-              <span className="text-2xl">{liked ? '❤️' : '🤍'}</span>
-              <span>{likes}</span>
-            </button>
-            <button
-              onClick={() => setShowComments(!showComments)}
-              className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 font-semibold transition-colors"
-            >
-              <span className="text-2xl">💬</span>
-              <span>{comments.length}</span>
-            </button>
-            <button className="flex items-center space-x-2 text-gray-500 hover:text-gray-700 font-semibold transition-colors">
-              <span className="text-2xl">🔗</span>
-              <span>Compartir</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Sección de comentarios */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold text-gray-900">Comentarios ({comments.length})</h3>
-            <button
-              onClick={() => setShowComments(!showComments)}
-              className="text-rolex hover:text-rolex-dark font-semibold"
-            >
-              {showComments ? 'Ocultar' : 'Mostrar'}
-            </button>
-          </div>
-
-          {/* Formulario de comentario */}
-          {user && (
-            <form onSubmit={handleComment} className="mb-6">
-              <div className="flex items-start space-x-3">
-                <img 
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop" 
-                  alt={user.nombreCompleto}
-                  className="w-10 h-10 rounded-full"
-                />
-                <div className="flex-1">
-                  <textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Escribe un comentario..."
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-rolex resize-none"
-                    rows={3}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!newComment.trim()}
-                    className="mt-2 px-6 py-2 text-white rounded-lg transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-                    style={{ backgroundColor: 'var(--rolex)' }}
-                  >
-                    Comentar
-                  </button>
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-xl">
+          <div className="border-b border-gray-100 p-6">
+            <div className="flex items-start gap-4">
+              <Link href={`/usuario/${post.user_id}`} className="shrink-0">
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-rolex text-sm font-bold text-white">
+                  {author.avatarUrl && /^https?:\/\//i.test(author.avatarUrl) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={author.avatarUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    getInitials(author.name)
+                  )}
                 </div>
-              </div>
-            </form>
-          )}
-
-          {!user && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
-              <p className="text-gray-600 mb-2">Inicia sesión para comentar</p>
-              <Link 
-                href="/login"
-                className="text-rolex hover:text-rolex-dark font-semibold"
-              >
-                Iniciar sesión
               </Link>
-            </div>
-          )}
-
-          {/* Lista de comentarios */}
-          {showComments && (
-            <div className="space-y-4">
-              {comments.length > 0 ? (
-                comments.map((comment) => (
-                  <div key={comment.id} className="flex items-start space-x-3 p-4 bg-gray-50 rounded-xl">
-                    <Link href={`/user/${comment.username}`}>
-                      <img 
-                        src={comment.avatar} 
-                        alt={comment.name}
-                        className="w-10 h-10 rounded-full cursor-pointer hover:opacity-80 transition-opacity"
-                      />
-                    </Link>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <Link href={`/user/${comment.username}`} className="hover:opacity-80 transition-opacity">
-                          <span className="font-semibold text-gray-900">{comment.name}</span>
-                        </Link>
-                        <span className="text-sm text-gray-500">@{comment.username}</span>
-                      </div>
-                      <p className="text-gray-700">{comment.content}</p>
-                    </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h1 className="truncate text-xl font-bold text-gray-900">{author.name}</h1>
+                    <p className="truncate text-sm text-gray-500">{author.handle}</p>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No hay comentarios aún. ¡Sé el primero en comentar!</p>
+                  <PostActions
+                    postId={post.id}
+                    usuario={author.name}
+                    postOwnerId={post.user_id}
+                    ownerFullName={post.profiles?.full_name ?? null}
+                    ownerUsername={post.profiles?.username ?? null}
+                  />
                 </div>
-              )}
+                {post.description ? <p className="mt-4 whitespace-pre-wrap text-gray-800">{post.description}</p> : null}
+              </div>
             </div>
-          )}
+          </div>
+
+          <div className="bg-black">
+            <video src={post.video_url} controls playsInline preload="metadata" className="max-h-[70vh] w-full">
+              Tu navegador no soporta la reproducción de video.
+            </video>
+          </div>
+
+          <div className="p-6">
+            <h2 className="mb-3 text-lg font-bold text-gray-900">Comentarios</h2>
+
+            <form onSubmit={(e) => void submitComment(e)} className="mb-6 flex flex-col gap-2 sm:flex-row">
+              <input
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder={user ? 'Escribe un comentario…' : 'Inicia sesión para comentar'}
+                disabled={!user}
+                className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+              />
+              <Button type="submit" disabled={!user} className="text-white" style={{ backgroundColor: 'var(--rolex)' }}>
+                Comentar
+              </Button>
+            </form>
+
+            {comments.length === 0 ? (
+              <p className="text-sm text-gray-600">Aún no hay comentarios</p>
+            ) : (
+              <ul className="space-y-3">
+                {comments.map((c) => {
+                  const who = getDisplayName(c.profiles?.full_name ?? null, c.profiles?.username ?? 'usuario')
+                  return (
+                    <li key={c.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                      <div className="mb-1 text-xs font-semibold text-gray-700">{who}</div>
+                      <div className="text-sm text-gray-900 whitespace-pre-wrap">{c.content}</div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
         </div>
       </div>
     </main>
   )
 }
-

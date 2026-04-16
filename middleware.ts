@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+import { isProfileIncomplete } from '@/src/lib/profile/onboarding'
 import { supabaseAnonKey, supabaseUrl } from '@/src/lib/supabase/env'
 
 /**
@@ -32,7 +33,44 @@ export async function middleware(request: NextRequest) {
     },
   })
 
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+  const isPublicPath =
+    pathname.startsWith('/auth/callback') ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/_next') ||
+    pathname === '/favicon.ico'
+
+  if (!user || isPublicPath) {
+    return supabaseResponse
+  }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('full_name, username, ciudad, instrumentos')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  const needsOnboarding = isProfileIncomplete(profile)
+  const onboardingPath = '/bienvenida'
+
+  if (needsOnboarding && pathname !== onboardingPath) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = onboardingPath
+    redirectUrl.search = ''
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  if (!needsOnboarding && pathname === onboardingPath) {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/'
+    redirectUrl.search = ''
+    return NextResponse.redirect(redirectUrl)
+  }
 
   return supabaseResponse
 }

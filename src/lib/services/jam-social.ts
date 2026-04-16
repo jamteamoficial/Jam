@@ -11,6 +11,7 @@ export type FeedPostRow = {
     id: string
     username: string | null
     full_name: string | null
+    ciudad: string | null
     avatar_url: string | null
     bio: string | null
     instrumentos: string[] | null
@@ -54,6 +55,7 @@ export async function getFeed(
         id,
         username,
         full_name,
+        ciudad,
         avatar_url,
         bio,
         instrumentos
@@ -85,6 +87,7 @@ export async function getFeedByUserIds(
         id,
         username,
         full_name,
+        ciudad,
         avatar_url,
         bio,
         instrumentos
@@ -303,8 +306,7 @@ export async function toggleFollow(
 }
 
 /**
- * Mensaje directo 1:1 (tabla `direct_messages`).
- * Distinto de `messages` ligada a conversaciones por `conversation_id`.
+ * Mensaje directo 1:1 usando `public.direct_messages`.
  */
 export async function sendMessage(
   supabase: SupabaseClient,
@@ -337,4 +339,144 @@ export async function sendMessage(
     })
     .select()
     .single()
+}
+
+export async function listDirectMessagesThread(
+  supabase: SupabaseClient,
+  input: { otherUserId: string; limit?: number }
+) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: [], error: new Error('Debes iniciar sesión') }
+  }
+
+  const limit = input.limit ?? 200
+
+  const { data, error } = await supabase
+    .from('direct_messages')
+    .select('id, sender_id, receiver_id, content, created_at')
+    .or(
+      `and(sender_id.eq.${user.id},receiver_id.eq.${input.otherUserId}),and(sender_id.eq.${input.otherUserId},receiver_id.eq.${user.id})`
+    )
+    .order('created_at', { ascending: true })
+    .limit(limit)
+
+  return { data: data ?? [], error: error ? new Error(error.message) : null }
+}
+
+export async function getPostLikeCount(supabase: SupabaseClient, postId: string) {
+  const { count, error } = await supabase
+    .from('post_likes')
+    .select('post_id', { count: 'exact', head: true })
+    .eq('post_id', postId)
+
+  return { count: count ?? 0, error: error ? new Error(error.message) : null }
+}
+
+export async function getPostLikedByMe(supabase: SupabaseClient, postId: string) {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { liked: false, error: null }
+  }
+
+  const { data, error } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('post_id', postId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (error) {
+    return { liked: false, error: new Error(error.message) }
+  }
+
+  return { liked: Boolean(data), error: null }
+}
+
+export async function togglePostLike(
+  supabase: SupabaseClient,
+  postId: string
+): Promise<{ liked: boolean; error: Error | null }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { liked: false, error: new Error('Debes iniciar sesión') }
+  }
+
+  const { data: existing, error: readError } = await supabase
+    .from('post_likes')
+    .select('post_id')
+    .eq('post_id', postId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (readError) {
+    return { liked: false, error: new Error(readError.message) }
+  }
+
+  if (existing) {
+    const { error } = await supabase
+      .from('post_likes')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', user.id)
+
+    return { liked: false, error: error ? new Error(error.message) : null }
+  }
+
+  const { error } = await supabase.from('post_likes').insert({
+    post_id: postId,
+    user_id: user.id,
+  })
+
+  return { liked: true, error: error ? new Error(error.message) : null }
+}
+
+export async function countLikesForPosts(supabase: SupabaseClient, postIds: string[]) {
+  if (postIds.length === 0) {
+    return { data: {} as Record<string, number>, error: null }
+  }
+
+  const { data, error } = await supabase.from('post_likes').select('post_id').in('post_id', postIds)
+
+  if (error) {
+    return { data: null, error: new Error(error.message) }
+  }
+
+  const counts: Record<string, number> = {}
+  for (const row of data ?? []) {
+    const id = row.post_id as string
+    counts[id] = (counts[id] ?? 0) + 1
+  }
+
+  return { data: counts, error: null }
+}
+
+export async function countFollowers(supabase: SupabaseClient, userId: string) {
+  const { count, error } = await supabase
+    .from('follows')
+    .select('follower_id', { count: 'exact', head: true })
+    .eq('following_id', userId)
+
+  return { count: count ?? 0, error: error ? new Error(error.message) : null }
+}
+
+export async function countFollowing(supabase: SupabaseClient, userId: string) {
+  const { count, error } = await supabase
+    .from('follows')
+    .select('following_id', { count: 'exact', head: true })
+    .eq('follower_id', userId)
+
+  return { count: count ?? 0, error: error ? new Error(error.message) : null }
 }

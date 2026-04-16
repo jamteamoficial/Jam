@@ -23,89 +23,6 @@ interface Comunidad {
   miembros: string
 }
 
-const COMUNIDADES: Comunidad[] = [
-  {
-    id: 'audiciones',
-    nombre: 'Audiciones',
-    icono: '🎤',
-    descripcion: 'Encuentra audiciones y oportunidades para músicos',
-    color: 'purple',
-    miembros: '1.2k',
-  },
-  {
-    id: 'clases',
-    nombre: 'Aprender Música',
-    icono: '🎓',
-    descripcion: 'Clases, tutoriales y aprendizaje musical',
-    color: 'blue',
-    miembros: '2.5k',
-  },
-  {
-    id: 'rock',
-    nombre: 'Rock & Bandas',
-    icono: '🎸',
-    descripcion: 'Para bandas de rock y músicos del género',
-    color: 'red',
-    miembros: '3.1k',
-  },
-  {
-    id: 'emergentes',
-    nombre: 'Bandas Emergentes',
-    icono: '🚀',
-    descripcion: 'Bandas nuevas buscando crecer y conectar',
-    color: 'green',
-    miembros: '1.8k',
-  },
-  {
-    id: 'productores',
-    nombre: 'Productores & Beats',
-    icono: '🎧',
-    descripcion: 'Productores y creadores de beats',
-    color: 'yellow',
-    miembros: '2.2k',
-  },
-  {
-    id: 'jams',
-    nombre: 'Jams & Sesiones',
-    icono: '🥁',
-    descripcion: 'Jams en vivo y sesiones improvisadas',
-    color: 'orange',
-    miembros: '1.5k',
-  },
-  {
-    id: 'jazz',
-    nombre: 'Jazz & Blues',
-    icono: '🎹',
-    descripcion: 'Comunidad de jazz, blues y música clásica',
-    color: 'indigo',
-    miembros: '890',
-  },
-  {
-    id: 'electronica',
-    nombre: 'Música Electrónica',
-    icono: '⚡',
-    descripcion: 'DJs, productores y amantes de la electrónica',
-    color: 'pink',
-    miembros: '1.9k',
-  },
-  {
-    id: 'folk',
-    nombre: 'Folk & Acústico',
-    icono: '🎻',
-    descripcion: 'Música acústica, folk y sonidos orgánicos',
-    color: 'teal',
-    miembros: '1.1k',
-  },
-  {
-    id: 'hiphop',
-    nombre: 'Hip-Hop & Rap',
-    icono: '🎤',
-    descripcion: 'Rappers, MCs y productores de hip-hop',
-    color: 'purple',
-    miembros: '2.3k',
-  },
-]
-
 const getIconGradient = (color: string) => {
   const map: Record<string, string> = {
     purple: 'from-violet-600 to-purple-900',
@@ -142,17 +59,17 @@ export default function ComunidadPanel({ onSelectCommunity, selectedCommunityId 
   const { user } = useAuth()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [userComunidades, setUserComunidades] = useState<Comunidad[]>([])
-  /** Simula membresía por id de comunidad (para demo / hasta conectar con Supabase) */
   const [miembroDe, setMiembroDe] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
-    if (!user?.id) return
+    const uid = user?.id
+    if (!uid) return
     let cancelled = false
     ;(async () => {
       const supabase = createClient()
       const [{ data: communities }, { data: mine }, { data: countMap }] = await Promise.all([
         listCommunities(supabase),
-        listMyCommunityMembershipIds(supabase, user.id),
+        listMyCommunityMembershipIds(supabase, uid),
         getCommunityMemberCountMap(supabase),
       ])
       if (cancelled) return
@@ -170,7 +87,6 @@ export default function ComunidadPanel({ onSelectCommunity, selectedCommunityId 
     }
   }, [user?.id, showCreateModal])
 
-  /** Demo: unirse con un clic; si ya eres miembro, el mismo botón abre el chat */
   const handlePrimaryAction = async (comunidadId: string) => {
     if (!user?.id) return
     const soyMiembro = miembroDe[comunidadId]
@@ -187,8 +103,6 @@ export default function ComunidadPanel({ onSelectCommunity, selectedCommunityId 
       }
     }
   }
-  const allComunidades = userComunidades.length > 0 ? userComunidades : COMUNIDADES
-
   return (
     <>
       <div className="h-full overflow-y-auto border-l border-emerald-900/40 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
@@ -215,7 +129,13 @@ export default function ComunidadPanel({ onSelectCommunity, selectedCommunityId 
           </div>
 
           <div className="space-y-3">
-            {allComunidades.map((comunidad) => {
+            {userComunidades.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-emerald-800/40 bg-slate-900/40 p-6 text-center">
+                <p className="text-sm text-slate-300">Aún no hay comunidades</p>
+                <p className="mt-2 text-xs text-slate-500">Crea una comunidad o pide a un admin que ejecute las migraciones en Supabase.</p>
+              </div>
+            ) : null}
+            {userComunidades.map((comunidad) => {
               const soyMiembro = !!miembroDe[comunidad.id]
               return (
                 <div

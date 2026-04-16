@@ -8,6 +8,7 @@ import { useAuth } from '@/app/context/AuthContext'
 import { uploadVideo } from '@/src/lib/hooks/useVideoUpload'
 import { createClient } from '@/src/lib/supabase/client'
 import { createPost } from '@/src/lib/services/jam-social'
+import { isProfileIncomplete } from '@/src/lib/profile/onboarding'
 
 interface CreateModalProps {
   isOpen: boolean
@@ -114,11 +115,43 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
     setLoading(true)
 
     try {
+      const supabase = createClient()
+      const {
+        data: { user: authUser },
+      } = await supabase.auth.getUser()
+      if (!authUser?.id) {
+        setLoading(false)
+        toast({
+          title: 'Sesion requerida',
+          description: 'Debes iniciar sesion para publicar.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, username, ciudad, instrumentos')
+        .eq('id', authUser.id)
+        .maybeSingle()
+
+      if (isProfileIncomplete(profile)) {
+        setLoading(false)
+        toast({
+          title: 'Completa tu perfil',
+          description: 'Antes de subir videos debes completar el onboarding.',
+          variant: 'destructive',
+        })
+        onClose()
+        window.location.href = '/bienvenida'
+        return
+      }
+
       let videoUrl: string | null = null
 
       // Si el contenido es video, subir a Supabase Storage
-      // Usar email como userId (o username si no hay email)
-      const userId = user.email || user.username || 'anonymous'
+      // Usar SIEMPRE el id real de Supabase Auth
+      const userId = authUser.id
       
       if (contentType === 'video' && selectedVideo) {
         try {
@@ -146,7 +179,6 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
         }
       }
 
-      const supabase = createClient()
       const description = text.trim() || null
       const finalVideoUrl =
         contentType === 'video'

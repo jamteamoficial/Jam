@@ -1,6 +1,6 @@
-import type { MockPost } from '@/app/data/mockPosts'
+import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
 
-function matchesInstrument(post: MockPost, filter: string): boolean {
+function matchesInstrument(post: FeedDisplayPost, filter: string): boolean {
   if (filter === 'Todos') return true
   const a = post.instrumento.toLowerCase()
   const b = filter.toLowerCase()
@@ -14,19 +14,19 @@ function matchesInstrument(post: MockPost, filter: string): boolean {
   return a.includes(b) || b.includes(a)
 }
 
-function matchesEstado(post: MockPost, filter: string): boolean {
+function matchesEstado(post: FeedDisplayPost, filter: string): boolean {
   if (filter === 'Todos') return true
   if (!post.estado) return true
   return post.estado === filter
 }
 
-function matchesCiudad(post: MockPost, ciudad: string): boolean {
+function matchesCiudad(post: FeedDisplayPost, ciudad: string): boolean {
   const q = ciudad.trim().toLowerCase()
   if (!q) return true
   return post.ciudad.toLowerCase().includes(q)
 }
 
-function matchesSearch(post: MockPost, search: string): boolean {
+function matchesSearch(post: FeedDisplayPost, search: string): boolean {
   const q = search.trim().toLowerCase()
   if (!q) return true
   return (
@@ -39,14 +39,14 @@ function matchesSearch(post: MockPost, search: string): boolean {
 }
 
 export function filterFeedPosts(
-  posts: MockPost[],
+  posts: FeedDisplayPost[],
   opts: {
     searchQuery: string
     instrument: string
     ciudad: string
     estado: string
   }
-): MockPost[] {
+): FeedDisplayPost[] {
   return posts.filter(
     (p) =>
       matchesSearch(p, opts.searchQuery) &&

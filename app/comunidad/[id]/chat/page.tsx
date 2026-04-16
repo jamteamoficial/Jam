@@ -1,401 +1,226 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Send, Users } from 'lucide-react'
+import { ArrowLeft, Send } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
+import { useToast } from '@/src/lib/hooks/use-toast'
+import { createClient } from '@/src/lib/supabase/client'
+import { joinCommunity, listCommunityMemberIds } from '@/src/lib/services/communities'
+import { getDisplayName, getInitials } from '@/src/lib/userDisplay'
 
-interface Message {
+type CommunityRow = {
   id: string
-  content: string
-  sender_id: string
-  sender_name: string
-  sender_avatar: string
-  created_at: string
+  name: string
+  description: string | null
+  icon: string | null
+  color: string | null
 }
 
-// Datos de comunidades con mensajes iniciales
-const mockComunidadesChats: { [key: string]: { nombre: string; icono: string; descripcion: string; miembros: number; initialMessages: Message[] } } = {
-  'audiciones': {
-    nombre: 'Audiciones',
-    icono: '🎤',
-    descripcion: 'Encuentra audiciones y oportunidades para músicos',
-    miembros: 1200,
-    initialMessages: [
-      {
-        id: '1',
-        content: '¡Bienvenidos a la comunidad de Audiciones! Compartan oportunidades y proyectos 🎵',
-        sender_id: 'mod',
-        sender_name: 'Moderador',
-        sender_avatar: '🎤',
-        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
-      },
-      {
-        id: '2',
-        content: 'Busco vocalista para proyecto de pop rock en Santiago',
-        sender_id: 'user1',
-        sender_name: 'Carlos Producer',
-        sender_avatar: '🎸',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      },
-      {
-        id: '3',
-        content: 'Necesitamos baterista urgente para concierto este viernes',
-        sender_id: 'user2',
-        sender_name: 'Rock Band',
-        sender_avatar: '🥁',
-        created_at: new Date(Date.now() - 43200000).toISOString()
-      }
-    ]
-  },
-  'clases': {
-    nombre: 'Aprender Música',
-    icono: '🎓',
-    descripcion: 'Clases, tutoriales y aprendizaje musical',
-    miembros: 2500,
-    initialMessages: [
-      {
-        id: '1',
-        content: '¡Bienvenidos a Aprender Música! Compartamos conocimientos y recursos 🎓',
-        sender_id: 'mod',
-        sender_name: 'Moderador',
-        sender_avatar: '🎓',
-        created_at: new Date(Date.now() - 86400000 * 3).toISOString()
-      },
-      {
-        id: '2',
-        content: 'Hola! ¿Alguien tiene recursos para aprender teoría musical?',
-        sender_id: 'user1',
-        sender_name: 'Estudiante Nuevo',
-        sender_avatar: '🎹',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      },
-      {
-        id: '3',
-        content: 'Tengo un curso completo en YouTube, lo comparto pronto!',
-        sender_id: 'user2',
-        sender_name: 'Prof. María',
-        sender_avatar: '🎓',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      }
-    ]
-  },
-  'rock': {
-    nombre: 'Rock & Bandas',
-    icono: '🎸',
-    descripcion: 'Para bandas de rock y músicos del género',
-    miembros: 3100,
-    initialMessages: [
-      {
-        id: '1',
-        content: '¿Alguien quiere hacer un cover de Nirvana? Busco banda!',
-        sender_id: 'user1',
-        sender_name: 'Guitar Hero',
-        sender_avatar: '🎸',
-        created_at: new Date(Date.now() - 7200000).toISOString()
-      },
-      {
-        id: '2',
-        content: 'Yo me apunto! Toco bajo y canto',
-        sender_id: 'user2',
-        sender_name: 'Bass Player',
-        sender_avatar: '🎸',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        id: '3',
-        content: '¡Perfecto! Tenemos un jam el viernes, ¿vienen?',
-        sender_id: 'user3',
-        sender_name: 'Rock Collective',
-        sender_avatar: '🎸',
-        created_at: new Date(Date.now() - 1800000).toISOString()
-      }
-    ]
-  },
-  'emergentes': {
-    nombre: 'Bandas Emergentes',
-    icono: '🚀',
-    descripcion: 'Bandas nuevas buscando crecer y conectar',
-    miembros: 1800,
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Somos una banda nueva buscando nuestro primer concierto. ¿Consejos?',
-        sender_id: 'user1',
-        sender_name: 'Nueva Banda',
-        sender_avatar: '🚀',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      },
-      {
-        id: '2',
-        content: '¡Sigan adelante! Compartan su música en redes y busquen bares pequeños para empezar',
-        sender_id: 'user2',
-        sender_name: 'Experto Musical',
-        sender_avatar: '🎤',
-        created_at: new Date(Date.now() - 43200000).toISOString()
-      }
-    ]
-  },
-  'productores': {
-    nombre: 'Productores & Beats',
-    icono: '🎧',
-    descripcion: 'Productores y creadores de beats',
-    miembros: 2200,
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Acabo de terminar un nuevo beat, ¿quieren escucharlo?',
-        sender_id: 'user1',
-        sender_name: 'Beat Maker',
-        sender_avatar: '🎧',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        id: '2',
-        content: '¡Sí! Compártelo en el feed principal',
-        sender_id: 'user2',
-        sender_name: 'Producer Pro',
-        sender_avatar: '🎛️',
-        created_at: new Date(Date.now() - 1800000).toISOString()
-      }
-    ]
-  },
-  'jams': {
-    nombre: 'Jams & Sesiones',
-    icono: '🥁',
-    descripcion: 'Jams en vivo y sesiones improvisadas',
-    miembros: 1500,
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Jam session este sábado en el centro, ¿quiénes se apuntan?',
-        sender_id: 'user1',
-        sender_name: 'Jam Master',
-        sender_avatar: '🥁',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      },
-      {
-        id: '2',
-        content: 'Yo voy! Llevo mi guitarra',
-        sender_id: 'user2',
-        sender_name: 'Guitar Jammer',
-        sender_avatar: '🎸',
-        created_at: new Date(Date.now() - 7200000).toISOString()
-      }
-    ]
-  },
-  'jazz': {
-    nombre: 'Jazz & Blues',
-    icono: '🎹',
-    descripcion: 'Comunidad de jazz, blues y música clásica',
-    miembros: 890,
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Buscamos saxofonista para nuestro cuarteto de jazz',
-        sender_id: 'user1',
-        sender_name: 'Jazz Quartet',
-        sender_avatar: '🎷',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      }
-    ]
-  },
-  'electronica': {
-    nombre: 'Música Electrónica',
-    icono: '⚡',
-    descripcion: 'DJs, productores y amantes de la electrónica',
-    miembros: 1900,
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Nueva pista de techno subida al feed! Déjenme saber qué opinan',
-        sender_id: 'user1',
-        sender_name: 'DJ Techno',
-        sender_avatar: '⚡',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      }
-    ]
-  },
-  'folk': {
-    nombre: 'Folk & Acústico',
-    icono: '🎻',
-    descripcion: 'Música acústica, folk y sonidos orgánicos',
-    miembros: 1100,
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Compartí un nuevo cover acústico de Radiohead, disfruten!',
-        sender_id: 'user1',
-        sender_name: 'Acoustic Lover',
-        sender_avatar: '🎻',
-        created_at: new Date(Date.now() - 43200000).toISOString()
-      }
-    ]
-  },
-  'hiphop': {
-    nombre: 'Hip-Hop & Rap',
-    icono: '🎤',
-    descripcion: 'Rappers, MCs y productores de hip-hop',
-    miembros: 2300,
-    initialMessages: [
-      {
-        id: '1',
-        content: '¿Alguien quiere hacer un featuring? Tengo un beat listo',
-        sender_id: 'user1',
-        sender_name: 'Rapper MC',
-        sender_avatar: '🎤',
-        created_at: new Date(Date.now() - 7200000).toISOString()
-      },
-      {
-        id: '2',
-        content: 'Yo me apunto! Tengo algunas letras',
-        sender_id: 'user2',
-        sender_name: 'Hip-Hop Artist',
-        sender_avatar: '🎤',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      }
-    ]
-  }
+type CommunityMessageRow = {
+  id: string
+  content: string
+  created_at: string
+  user_id: string
+  profiles: { full_name: string | null; username: string | null; avatar_url: string | null } | null
+}
+
+function normalizeCommunityMessageRow(row: any): CommunityMessageRow {
+  const profiles = Array.isArray(row?.profiles) ? row.profiles[0] : row?.profiles
+  return { ...row, profiles } as CommunityMessageRow
 }
 
 export default function ComunidadChatPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
-  const comunidadId = params?.id as string
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [text, setText] = useState('')
-  const [messages, setMessages] = useState<Message[]>([])
+  const { toast } = useToast()
+
+  const communityId = String(params.id ?? '')
+
   const [loading, setLoading] = useState(true)
-  const [isJoined, setIsJoined] = useState(false)
+  const [community, setCommunity] = useState<CommunityRow | null>(null)
+  const [isMember, setIsMember] = useState(false)
+  const [messages, setMessages] = useState<CommunityMessageRow[]>([])
+  const [text, setText] = useState('')
 
-  const comunidadData = comunidadId ? mockComunidadesChats[comunidadId] : null
+  const bottomRef = useRef<HTMLDivElement | null>(null)
 
-  // Verificar si el usuario está unido a la comunidad
+  const title = useMemo(() => community?.name ?? 'Comunidad', [community?.name])
+
   useEffect(() => {
-    if (typeof window !== 'undefined' && comunidadId) {
-      const joinedCommunities = JSON.parse(localStorage.getItem('joinedCommunities') || '[]')
-      setIsJoined(joinedCommunities.includes(comunidadId))
-    }
-  }, [comunidadId])
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
 
-  // Cargar mensajes desde localStorage o usar iniciales
   useEffect(() => {
-    if (comunidadData && typeof window !== 'undefined') {
-      const savedMessages = localStorage.getItem(`comunidad_chat_${comunidadId}`)
-      if (savedMessages) {
-        try {
-          const parsed = JSON.parse(savedMessages)
-          setMessages(parsed)
-        } catch (error) {
-          console.error('Error al cargar mensajes:', error)
-          setMessages(comunidadData.initialMessages)
-        }
-      } else {
-        setMessages(comunidadData.initialMessages)
+    let cancelled = false
+    ;(async () => {
+      if (!communityId) {
+        setLoading(false)
+        return
       }
+
+      setLoading(true)
+      const supabase = createClient()
+
+      const { data: comm, error: commErr } = await supabase
+        .from('communities')
+        .select('id, name, description, icon, color')
+        .eq('id', communityId)
+        .maybeSingle()
+
+      if (cancelled) return
+      if (commErr || !comm) {
+        setCommunity(null)
+        setIsMember(false)
+        setMessages([])
+        setLoading(false)
+        return
+      }
+
+      setCommunity(comm as CommunityRow)
+
+      if (!user?.id) {
+        setIsMember(false)
+        setMessages([])
+        setLoading(false)
+        return
+      }
+
+      const { data: members } = await listCommunityMemberIds(supabase, communityId)
+      const member = Boolean(members?.includes(user.id))
+      setIsMember(member)
+
+      if (!member) {
+        setMessages([])
+        setLoading(false)
+        return
+      }
+
+      const { data: msgs, error: msgErr } = await supabase
+        .from('community_messages')
+        .select(
+          `
+          id,
+          user_id,
+          content,
+          created_at,
+          profiles (
+            full_name,
+            username,
+            avatar_url
+          )
+        `
+        )
+        .eq('community_id', communityId)
+        .order('created_at', { ascending: true })
+        .limit(200)
+
+      if (cancelled) return
+      if (msgErr) {
+        console.error('[comunidad/chat] Error cargando mensajes', msgErr)
+        setMessages([])
+      } else {
+        setMessages(((msgs ?? []) as any[]).map(normalizeCommunityMessageRow))
+      }
+
       setLoading(false)
-    } else if (!comunidadData) {
-      setLoading(false)
+    })()
+
+    return () => {
+      cancelled = true
     }
-  }, [comunidadId, comunidadData])
+  }, [communityId, user?.id])
 
-  // Scroll automático al agregar mensajes
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // Guardar mensajes en localStorage
-  useEffect(() => {
-    if (comunidadId && messages.length > 0 && typeof window !== 'undefined') {
-      localStorage.setItem(`comunidad_chat_${comunidadId}`, JSON.stringify(messages))
+  const handleJoin = async () => {
+    if (!user?.id) {
+      router.push('/login')
+      return
     }
-  }, [messages, comunidadId])
+    const supabase = createClient()
+    const { error } = await joinCommunity(supabase, { communityId, userId: user.id })
+    if (error) {
+      toast({
+        title: 'No se pudo unir',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+    setIsMember(true)
+    toast({ title: 'Listo', description: 'Te uniste a la comunidad.' })
+  }
 
-  const sendMessage = () => {
+  const send = async () => {
     const content = text.trim()
-    if (!content || !user || !comunidadData) return
-
-    const userName = user.username || user.email?.split('@')[0] || 'Usuario'
-    const userAvatar = '🎸' // Avatar por defecto
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      sender_id: 'user',
-      sender_name: userName,
-      sender_avatar: userAvatar,
-      created_at: new Date().toISOString()
+    if (!content) return
+    if (!user?.id) {
+      router.push('/login')
+      return
+    }
+    if (!isMember) {
+      toast({
+        title: 'Debes unirte',
+        description: 'Únete a la comunidad para escribir en el chat.',
+        variant: 'destructive',
+      })
+      return
     }
 
-    setMessages((prev) => [...prev, newMessage])
-    setText('')
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('community_messages')
+      .insert({
+        community_id: communityId,
+        user_id: user.id,
+        content,
+      })
+      .select(
+        `
+        id,
+        user_id,
+        content,
+        created_at,
+        profiles (
+          full_name,
+          username,
+          avatar_url
+        )
+      `
+      )
+      .single()
 
-    // Focus en el input después de enviar
-    setTimeout(() => {
-      const input = document.querySelector('input[type="text"]') as HTMLInputElement
-      input?.focus()
-    }, 100)
+    if (error) {
+      toast({
+        title: 'No se pudo enviar',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setText('')
+    setMessages((prev) => [...prev, normalizeCommunityMessageRow(data)])
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-green-50 via-blue-50 to-green-50">
-        <p className="text-gray-600">Cargando chat...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+        <p className="text-gray-600">Cargando chat…</p>
       </div>
     )
   }
 
-  // Verificar si el usuario está unido
-  if (!isJoined && comunidadData) {
+  if (!community) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-green-50 via-blue-50 to-green-50">
-        <div className="text-center max-w-md p-8 bg-white rounded-2xl shadow-xl border-2 border-rolex/30">
-          <div className="w-20 h-20 rounded-full bg-rolex flex items-center justify-center text-4xl mb-4 mx-auto">
-            {comunidadData.icono}
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Acceso restringido</h2>
-          <p className="text-gray-600 mb-6">
-            Debes unirte a <strong>{comunidadData.nombre}</strong> para acceder al chat comunitario
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Button
-              onClick={() => router.push(`/comunidad/${comunidadId}`)}
-              className="text-white hover:opacity-90"
-              style={{ backgroundColor: 'var(--rolex)' }}
-            >
-              Ver Comunidad
-            </Button>
-            <Button
-              onClick={() => router.push('/')}
-              variant="outline"
-              className="border-2"
-              style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
-            >
-              Volver al inicio
-            </Button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (!comunidadData) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-green-50 via-blue-50 to-green-50">
-        <div className="text-center">
-          <div className="w-20 h-20 rounded-full bg-rolex flex items-center justify-center text-4xl mb-4 mx-auto">
-            💬
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Comunidad no encontrada</h2>
-          <p className="text-gray-600 mb-4">El chat de esta comunidad no existe</p>
-          <Button
-            onClick={() => router.push('/')}
-            className="text-white hover:opacity-90"
-            style={{ backgroundColor: 'var(--rolex)' }}
-          >
-            Volver al inicio
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 px-6">
+        <div className="max-w-lg text-center">
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">Comunidad no encontrada</h2>
+          <Button onClick={() => router.push('/comunidades')} className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
+            Volver
           </Button>
         </div>
       </div>
@@ -403,117 +228,81 @@ export default function ComunidadChatPage() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="border-b-2 border-rolex/30 p-4 bg-white">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div className="w-12 h-12 rounded-full bg-rolex flex items-center justify-center text-2xl">
-            {comunidadData.icono}
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl flex-col px-4 py-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Link href={`/comunidad/${community.id}`} className="inline-flex items-center gap-2 text-sm font-semibold text-gray-700 hover:underline">
+            <ArrowLeft className="h-4 w-4" />
+            {community.icon ? <span>{community.icon}</span> : null}
+            <span className="truncate">{title}</span>
+          </Link>
+          {!isMember ? (
+            <Button onClick={() => void handleJoin()} className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
+              Unirme
+            </Button>
+          ) : null}
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-rolex/20 bg-white shadow-xl">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+            {messages.length === 0 ? (
+              <div className="py-16 text-center text-sm text-gray-600">Aún no hay mensajes</div>
+            ) : (
+              messages.map((m) => {
+                const mine = Boolean(user?.id && m.user_id === user.id)
+                const name = getDisplayName(m.profiles?.full_name, m.profiles?.username || 'usuario')
+                return (
+                  <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${mine ? 'bg-[var(--rolex)] text-white' : 'bg-gray-100 text-gray-900'}`}>
+                      {!mine ? (
+                        <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold text-gray-600">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[10px] font-bold text-gray-700 ring-1 ring-gray-200">
+                            {m.profiles?.avatar_url && /^https?:\/\//i.test(m.profiles.avatar_url) ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={m.profiles.avatar_url} alt="" className="h-6 w-6 rounded-full object-cover" />
+                            ) : (
+                              getInitials(name)
+                            )}
+                          </span>
+                          <span className="truncate">{name}</span>
+                        </div>
+                      ) : null}
+                      <div className="whitespace-pre-wrap leading-relaxed">{m.content}</div>
+                      <div className={`mt-1 text-[10px] ${mine ? 'text-white/80' : 'text-gray-500'}`}>
+                        {new Date(m.created_at).toLocaleString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+            <div ref={bottomRef} />
           </div>
-          <div className="flex-1">
-            <h2 className="font-bold text-xl text-gray-900">{comunidadData.nombre}</h2>
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Users className="w-4 h-4" />
-              <span>{comunidadData.miembros.toLocaleString('es-CL')} miembros</span>
-            </div>
+
+          <div className="border-t border-rolex/10 p-3">
+            {!user ? (
+              <p className="text-center text-xs text-gray-600">Inicia sesión para participar.</p>
+            ) : !isMember ? (
+              <p className="text-center text-xs text-gray-600">Únete a la comunidad para escribir.</p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <input
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Escribe un mensaje…"
+                  className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') void send()
+                  }}
+                />
+                <Button onClick={() => void send()} className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-green-50 via-blue-50 to-green-50">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-rolex flex items-center justify-center text-3xl mb-4">
-              {comunidadData.icono}
-            </div>
-            <p className="text-gray-600">Inicia la conversación en {comunidadData.nombre}</p>
-          </div>
-        ) : (
-          messages.map((message) => {
-            const isUser = message.sender_id === 'user'
-            
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
-                    isUser
-                      ? 'bg-rolex text-white'
-                      : 'bg-white text-gray-900 border-2 border-rolex/30'
-                  }`}
-                >
-                  {!isUser && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">{message.sender_avatar}</span>
-                      <span className="font-semibold text-sm text-gray-700">{message.sender_name}</span>
-                    </div>
-                  )}
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                  <p className={`text-xs mt-1 ${isUser ? 'text-white/80' : 'text-gray-500'}`}>
-                    {new Date(message.created_at).toLocaleTimeString('es-CL', { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
-                    })}
-                  </p>
-                </div>
-              </div>
-            )
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="border-t-2 border-rolex/30 p-4 bg-white">
-        {!user ? (
-          <div className="text-center py-4">
-            <p className="text-gray-600 mb-2">Inicia sesión para enviar mensajes</p>
-            <Button
-              onClick={() => router.push('/')}
-              className="text-white hover:opacity-90"
-              style={{ backgroundColor: 'var(--rolex)' }}
-            >
-              Iniciar Sesión
-            </Button>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              placeholder={`Escribe un mensaje en ${comunidadData.nombre}...`}
-              className="flex-1 px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
-              autoFocus
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={!text.trim()}
-              className="text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ backgroundColor: 'var(--rolex)' }}
-            >
-              <Send className="w-5 h-5" />
-            </Button>
-          </div>
-        )}
       </div>
     </div>
   )
 }
-

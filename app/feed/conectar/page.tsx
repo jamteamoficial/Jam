@@ -1,168 +1,95 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/app/context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
-import { Music, MessageCircle, MapPin } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Music } from 'lucide-react'
 import FeedTabs from '@/app/components/FeedTabs'
-import { CONECTAR_POSTS, type MockPost } from '@/app/data/mockPosts'
+import FeedVideoCard from '@/app/components/FeedVideoCard'
+import { createClient } from '@/src/lib/supabase/client'
+import { getFeed } from '@/src/lib/services/jam-social'
+import type { FeedPostRow } from '@/src/lib/services/jam-social'
+import { mapFeedPostRowToDisplayPost } from '@/src/lib/mapFeedPost'
+import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
 
 export default function ConectarFeed() {
-  const { user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
-  const [currentPosts, setCurrentPosts] = useState<MockPost[]>(CONECTAR_POSTS)
+  const [posts, setPosts] = useState<FeedDisplayPost[]>([])
 
-  // Cargar publicaciones del usuario desde localStorage
+  const load = async () => {
+    const supabase = createClient()
+    const { data, error } = await getFeed(supabase, { limit: 50 })
+    if (error) {
+      console.error('[feed/conectar] Error cargando posts', error)
+      setPosts([])
+      return
+    }
+
+    const mapped = ((data ?? []) as Array<FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })>).map(
+      (row) => mapFeedPostRowToDisplayPost(row, 'conectar')
+    )
+    setPosts(mapped)
+  }
+
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userPosts = JSON.parse(localStorage.getItem('userPosts') || '[]')
-      // Filtrar solo posts del feed conectar
-      const conectarUserPosts = userPosts.filter((post: MockPost) => 
-        post.feedType === 'conectar'
-      )
-      if (conectarUserPosts.length > 0) {
-        // Combinar posts del usuario con los mock posts
-        setCurrentPosts([...conectarUserPosts, ...CONECTAR_POSTS])
-      }
-    }
-
-    // Escuchar eventos de nueva publicación
-    const handleNewPost = () => {
-      const userPosts = JSON.parse(localStorage.getItem('userPosts') || '[]')
-      // Filtrar solo posts del feed conectar
-      const conectarUserPosts = userPosts.filter((post: MockPost) => 
-        post.feedType === 'conectar'
-      )
-      setCurrentPosts([...conectarUserPosts, ...CONECTAR_POSTS])
-    }
-
-    window.addEventListener('newPostCreated', handleNewPost)
-    return () => {
-      window.removeEventListener('newPostCreated', handleNewPost)
-    }
+    void load()
+    const onNew = () => void load()
+    window.addEventListener('newPostCreated', onNew)
+    return () => window.removeEventListener('newPostCreated', onNew)
   }, [])
 
   const handleJam = (postId: string, usuario: string) => {
     if (!user) {
       toast({
-        title: "Inicia sesión",
-        description: "Necesitas iniciar sesión para enviar un JAM",
-        variant: "destructive"
+        title: 'Inicia sesión',
+        description: 'Necesitas iniciar sesión para enviar un JAM',
+        variant: 'destructive',
       })
       return
     }
 
-    // Disparar animación JAM
     window.dispatchEvent(new CustomEvent('showJamAnimation'))
-
     toast({
-      title: "¡JAM enviado!",
+      title: '¡JAM enviado!',
       description: `Tu solicitud fue enviada a ${usuario}`,
     })
-  }
-
-  const getGradientClass = (index: number) => {
-    const gradients = [
-      'bg-gradient-to-br from-green-100 to-emerald-100',
-      'bg-gradient-to-br from-blue-100 to-cyan-100',
-      'bg-gradient-to-br from-green-100 to-emerald-100',
-      'bg-gradient-to-br from-yellow-100 to-orange-100',
-      'bg-gradient-to-br from-emerald-100 to-green-100',
-      'bg-gradient-to-br from-pink-100 to-rose-100',
-      'bg-gradient-to-br from-amber-100 to-yellow-100',
-      'bg-gradient-to-br from-teal-100 to-green-100'
-    ]
-    return gradients[index % gradients.length]
+    void postId
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-green-50 py-8">
-      {/* Tabs de Feed */}
+    <div className="relative min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 py-8">
       <FeedTabs />
 
-      {/* Feed */}
-      <div className="max-w-4xl mx-auto px-4">
-        {currentPosts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-96 text-center">
-            <Music className="w-20 h-20 text-rolex/50 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No hay publicaciones aún</h2>
-            <p className="text-gray-600 mb-6">Sé el primero en compartir</p>
+      <div className="mx-auto max-w-3xl px-4">
+        {posts.length === 0 ? (
+          <div className="flex h-96 flex-col items-center justify-center text-center">
+            <Music className="mb-4 h-16 w-16 text-rolex/40" />
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Aún no hay publicaciones</h2>
+            <p className="max-w-md text-sm leading-relaxed text-gray-600">
+              El feed está conectado a Supabase. Cuando existan videos, se mostrarán aquí.
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-            {currentPosts.map((post, index) => (
-              <div
-                key={post.id}
-                className="relative bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-rolex/20 hover:border-rolex/40 transition-all hover:shadow-xl"
-              >
-                <div className={`absolute top-0 left-0 right-0 h-32 ${getGradientClass(index)}`} />
-
-                <div className="relative p-6 pt-20">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-4xl shadow-lg border-2 border-white -mt-12">
-                      {post.avatar}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-1">
-                        {post.usuario}
-                      </h3>
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span className="px-2 py-1 bg-rolex/20 rounded-full font-semibold text-rolex">
-                          🎸 {post.instrumento}
-                        </span>
-                        <span className="px-2 py-1 bg-blue-100 rounded-full font-semibold text-blue-700">
-                          🎵 {post.estilo}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-gray-600 text-sm mt-1">
-                        <MapPin className="w-3 h-3" />
-                        <span>{post.ciudad}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-gray-700 leading-relaxed line-clamp-4">
-                      {post.texto}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Button
-                      onClick={() => handleJam(post.id, post.usuario)}
-                      className="flex-1 bg-rolex hover:bg-rolex-light text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-105"
-                    >
-                      <Music className="w-4 h-4 mr-2" />
-                      JAM
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-4 py-3 rounded-xl"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+          <div className="mt-6 space-y-4">
+            {posts.map((post) => (
+              <FeedVideoCard key={post.id} post={post} onJam={handleJam} />
             ))}
           </div>
         )}
       </div>
 
-      {/* Botón flotante Crear Publicación */}
-      <button
-        onClick={() => {
-          const event = new CustomEvent('openCreateModal')
-          window.dispatchEvent(event)
-        }}
-        className="fixed bottom-8 right-8 w-20 h-20 bg-rolex hover:bg-rolex-light text-white rounded-full shadow-2xl flex items-center justify-center text-4xl font-bold transition-all duration-300 hover:scale-110 active:scale-95 z-50"
-        aria-label="Crear publicación"
-      >
-        +
-      </button>
+      {isAuthenticated ? (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('openCreateModal'))}
+          className="fixed bottom-8 right-8 z-50 flex h-16 w-16 items-center justify-center rounded-full text-3xl font-bold text-white shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 hover:opacity-90"
+          style={{ backgroundColor: 'var(--rolex)' }}
+          aria-label="Crear publicación"
+        >
+          +
+        </button>
+      ) : null}
     </div>
   )
 }
-
-

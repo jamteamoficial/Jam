@@ -28,27 +28,13 @@ interface User {
   profile?: ProfileData
 }
 
-export interface UserProfile {
-  username: string
-  name: string
-  avatar: string
-  bio?: string
-  profileData?: ProfileData
-  followers?: number
-  following?: number
-}
-
 interface AuthContextType {
   user: User | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<boolean>
   logout: () => void
   register: (userData: RegisterData) => Promise<boolean>
-  updateProfile: (profileData: ProfileData) => void
-  followUser: (username: string) => void
-  unfollowUser: (username: string) => void
-  isFollowing: (username: string) => boolean
-  getUserProfile: (username: string) => UserProfile | null
+  updateProfile: (profileData: ProfileData) => Promise<void>
 }
 
 interface RegisterData {
@@ -64,31 +50,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
+  const syncFromSupabase = async (supabaseUser: SupabaseAuthUser) => {
+    const supabase = createClient()
+
+    await ensurePublicProfileFromAuth(supabaseUser).catch(() => {
+      /* tabla profiles o RLS: se ignora para no bloquear la UI */
+    })
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, full_name, ciudad, bio, instrumentos')
+      .eq('id', supabaseUser.id)
+      .maybeSingle()
+
+    const userData: User = {
+      id: supabaseUser.id,
+      email: supabaseUser.email || `${supabaseUser.id}@jam.local`,
+      username:
+        profile?.username ||
+        supabaseUser.email?.split('@')[0] ||
+        supabaseUser.id.slice(0, 8),
+      nombreCompleto:
+        profile?.full_name ||
+        supabaseUser.user_metadata?.full_name ||
+        supabaseUser.user_metadata?.name ||
+        'Usuario',
+    }
+
+    const instrumentosJoined = Array.isArray(profile?.instrumentos) ? profile.instrumentos.join(', ') : ''
+
+    if (profile?.ciudad || profile?.bio || instrumentosJoined) {
+      userData.profile = {
+        nombreCompleto: userData.nombreCompleto,
+        comuna: '',
+        ciudad: profile?.ciudad || '',
+        pais: '',
+        edad: '',
+        nivelMusical: '',
+        instrumentos: instrumentosJoined,
+        canta: false,
+        descripcion: profile?.bio || '',
+        rol: '',
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(userData))
+      localStorage.setItem('isAuthenticated', 'true')
+    }
+
+    setUser(userData)
+    setIsAuthenticated(true)
+  }
+
   // Cargar y mantener sesión: localStorage + sincronizar con Supabase (Google)
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const supabase = createClient()
-
-    const syncFromSupabase = async (supabaseUser: SupabaseAuthUser) => {
-      const userData: User = {
-        id: supabaseUser.id,
-        email: supabaseUser.email || `${supabaseUser.id}@jam.local`,
-        username: supabaseUser.email?.split('@')[0] || supabaseUser.id.slice(0, 8),
-        nombreCompleto:
-          supabaseUser.user_metadata?.full_name ||
-          supabaseUser.user_metadata?.name ||
-          'Usuario',
-      }
-      localStorage.setItem('user', JSON.stringify(userData))
-      localStorage.setItem('isAuthenticated', 'true')
-      setUser(userData)
-      setIsAuthenticated(true)
-
-      void ensurePublicProfileFromAuth(supabaseUser).catch(() => {
-        /* tabla profiles o RLS: se ignora para no bloquear la UI */
-      })
-    }
 
     const initAuth = async () => {
       const { data: { user: supabaseUser } } = await supabase.auth.getUser()
@@ -129,232 +148,80 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulación de autenticación
-    // En producción, esto haría una llamada a tu API
-    
-    // Buscar si existe un usuario registrado con este email
-    const registeredUsers = localStorage.getItem('registeredUsers')
-    let userData: User | null = null
-
-    if (registeredUsers) {
-      try {
-        const users: User[] = JSON.parse(registeredUsers)
-        const foundUser = users.find(u => u.email === email)
-        if (foundUser) {
-          userData = foundUser
-        }
-      } catch (error) {
-        console.error('Error al leer usuarios registrados:', error)
-      }
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.user) {
+      console.error('[Auth] signIn error', error)
+      return false
     }
 
-    // Si no se encontró un usuario registrado, crear uno temporal desde el email
-    if (!userData) {
-      userData = {
-        email,
-        username: email.split('@')[0], // Username basado en email como fallback
-        nombreCompleto: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-      }
-    }
-
-    // Guardar en localStorage
-    localStorage.setItem('user', JSON.stringify(userData))
-    localStorage.setItem('isAuthenticated', 'true')
-    
-    setUser(userData)
-    setIsAuthenticated(true)
-    
+    await syncFromSupabase(data.user)
     return true
   }
 
   const register = async (userData: RegisterData): Promise<boolean> => {
-    // Simulación de registro
-    // En producción, esto haría una llamada a tu API
-    
-    const newUser: User = {
+    const supabase = createClient()
+    const { data, error } = await supabase.auth.signUp({
       email: userData.email,
-      username: userData.username,
-      nombreCompleto: userData.nombreCompleto
+      password: userData.password,
+      options: {
+        data: {
+          full_name: userData.nombreCompleto,
+          username: userData.username,
+        },
+      },
+    })
+
+    if (error) {
+      console.error('[Auth] signUp error', error)
+      return false
     }
 
-    // Guardar en la lista de usuarios registrados
-    const registeredUsers = localStorage.getItem('registeredUsers')
-    let users: User[] = []
-    
-    if (registeredUsers) {
-      try {
-        users = JSON.parse(registeredUsers)
-      } catch (error) {
-        console.error('Error al leer usuarios registrados:', error)
-        users = []
-      }
+    // Si el proyecto requiere confirmación por email, puede no haber sesión inmediata.
+    if (data.user) {
+      await ensurePublicProfileFromAuth(data.user).catch(() => {})
+      await syncFromSupabase(data.user)
     }
 
-    // Verificar si el email ya existe
-    const existingUserIndex = users.findIndex(u => u.email === userData.email)
-    if (existingUserIndex >= 0) {
-      // Actualizar usuario existente
-      users[existingUserIndex] = newUser
-    } else {
-      // Agregar nuevo usuario
-      users.push(newUser)
-    }
-
-    localStorage.setItem('registeredUsers', JSON.stringify(users))
-
-    // Guardar sesión actual
-    localStorage.setItem('user', JSON.stringify(newUser))
-    localStorage.setItem('isAuthenticated', 'true')
-    
-    setUser(newUser)
-    setIsAuthenticated(true)
-    
     return true
   }
 
-  const updateProfile = (profileData: ProfileData) => {
-    if (!user) return
+  const updateProfile = async (profileData: ProfileData) => {
+    if (!user?.id) return
+
+    const supabase = createClient()
+    const instrumentos = profileData.instrumentos
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        full_name: profileData.nombreCompleto || null,
+        username: user.username,
+        ciudad: profileData.ciudad || null,
+        bio: profileData.descripcion || null,
+        instrumentos,
+      })
+      .eq('id', user.id)
+
+    if (error) {
+      console.error('[Auth] updateProfile error', error)
+      return
+    }
 
     const updatedUser: User = {
       ...user,
       nombreCompleto: profileData.nombreCompleto,
-      profile: profileData
+      profile: profileData,
     }
 
-    // Actualizar en localStorage
     localStorage.setItem('user', JSON.stringify(updatedUser))
-    
-    // Actualizar en la lista de usuarios registrados
-    const registeredUsers = localStorage.getItem('registeredUsers')
-    if (registeredUsers) {
-      try {
-        const users: User[] = JSON.parse(registeredUsers)
-        const userIndex = users.findIndex(u => u.email === user.email)
-        if (userIndex >= 0) {
-          users[userIndex] = updatedUser
-          localStorage.setItem('registeredUsers', JSON.stringify(users))
-        }
-      } catch (error) {
-        console.error('Error al actualizar perfil en usuarios registrados:', error)
-      }
-    }
-
     setUser(updatedUser)
   }
 
-  const followUser = (username: string) => {
-    if (typeof window === 'undefined') return
-    
-    const followingList = localStorage.getItem('followingList')
-    let following: string[] = []
-    
-    if (followingList) {
-      try {
-        following = JSON.parse(followingList)
-      } catch (error) {
-        console.error('Error al leer lista de seguidos:', error)
-      }
-    }
-    
-    if (!following.includes(username)) {
-      following.push(username)
-      localStorage.setItem('followingList', JSON.stringify(following))
-    }
-  }
-
-  const unfollowUser = (username: string) => {
-    if (typeof window === 'undefined') return
-    
-    const followingList = localStorage.getItem('followingList')
-    if (!followingList) return
-    
-    try {
-      const following: string[] = JSON.parse(followingList)
-      const updatedFollowing = following.filter(u => u !== username)
-      localStorage.setItem('followingList', JSON.stringify(updatedFollowing))
-    } catch (error) {
-      console.error('Error al dejar de seguir:', error)
-    }
-  }
-
-  const isFollowing = (username: string): boolean => {
-    if (typeof window === 'undefined') return false
-    
-    const followingList = localStorage.getItem('followingList')
-    if (!followingList) return false
-    
-    try {
-      const following: string[] = JSON.parse(followingList)
-      return following.includes(username)
-    } catch (error) {
-      return false
-    }
-  }
-
-  const getUserProfile = (username: string): UserProfile | null => {
-    if (typeof window === 'undefined') return null
-    
-    let avatarFromPost = ''
-    let nameFromPost = ''
-    
-    // Primero buscar en posts para obtener avatar y nombre
-    const posts = localStorage.getItem('posts')
-    if (posts) {
-      try {
-        const allPosts: any[] = JSON.parse(posts)
-        const userPost = allPosts.find((p: any) => p.username === username)
-        if (userPost) {
-          avatarFromPost = userPost.avatar || ''
-          nameFromPost = userPost.name || ''
-        }
-      } catch (error) {
-        console.error('Error al buscar en posts:', error)
-      }
-    }
-    
-    // Buscar en usuarios registrados
-    const registeredUsers = localStorage.getItem('registeredUsers')
-    if (registeredUsers) {
-      try {
-        const users: User[] = JSON.parse(registeredUsers)
-        const foundUser = users.find(u => u.username === username)
-        if (foundUser) {
-          return {
-            username: foundUser.username,
-            name: foundUser.nombreCompleto,
-            avatar: avatarFromPost || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
-            bio: foundUser.profile?.descripcion,
-            profileData: foundUser.profile,
-            followers: 0,
-            following: 0
-          }
-        }
-      } catch (error) {
-        console.error('Error al buscar perfil:', error)
-      }
-    }
-    
-    // Si no se encuentra en usuarios registrados pero hay post, crear perfil básico
-    if (avatarFromPost || nameFromPost) {
-      return {
-        username: username,
-        name: nameFromPost || username,
-        avatar: avatarFromPost || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop',
-        bio: undefined,
-        profileData: undefined,
-        followers: 0,
-        following: 0
-      }
-    }
-    
-    return null
-  }
-
   const logout = async () => {
-    if (user) {
-      const userId = user.email || user.username || 'default'
-      localStorage.removeItem(`likedPosts_${userId}`)
-    }
     localStorage.removeItem('user')
     localStorage.removeItem('isAuthenticated')
     setUser(null)
@@ -378,10 +245,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout, 
       register, 
       updateProfile,
-      followUser,
-      unfollowUser,
-      isFollowing,
-      getUserProfile
     }}>
       {children}
     </AuthContext.Provider>

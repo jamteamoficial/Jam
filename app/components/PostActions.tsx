@@ -9,11 +9,22 @@ import {
   createComment,
   deleteComment,
   getCommentsByPost,
+  getPostLikeCount,
+  getPostLikedByMe,
+  togglePostLike,
   type PostCommentRow,
   updateComment,
 } from '@/src/lib/services/jam-social'
 import { createNotification } from '@/src/lib/services/notifications'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
+
+function normalizePostCommentRow(row: any): PostCommentRow {
+  const profiles = Array.isArray(row?.profiles) ? row.profiles[0] : row?.profiles
+  return {
+    ...row,
+    profiles,
+  } as PostCommentRow
+}
 
 interface PostActionsProps {
   postId: string
@@ -44,39 +55,23 @@ export default function PostActions({
   const [editingCommentContent, setEditingCommentContent] = useState('')
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Cargar contador global de likes (siempre visible)
-      const savedPostLikes = localStorage.getItem('postLikes_global')
-      if (savedPostLikes) {
-        try {
-          const postLikes: { [key: string]: number } = JSON.parse(savedPostLikes)
-          setLikeCount(postLikes[postId] || 0)
-        } catch (error) {
-          console.error('Error al cargar contadores:', error)
-        }
-      }
-      
-      // Solo cargar estado de "me gusta" si hay usuario en sesión
-      if (user) {
-        const userId = user.email || user.username || 'default'
-        const savedLikes = localStorage.getItem(`likedPosts_${userId}`)
-        
-        if (savedLikes) {
-          try {
-            const liked: string[] = JSON.parse(savedLikes)
-            setIsLiked(liked.includes(postId))
-          } catch (error) {
-            console.error('Error al cargar likes:', error)
-          }
-        }
-      } else {
-        // Si no hay usuario, resetear estado de "me gusta"
-        setIsLiked(false)
-      }
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const [{ count }, { liked }] = await Promise.all([
+        getPostLikeCount(supabase, postId),
+        getPostLikedByMe(supabase, postId),
+      ])
+      if (cancelled) return
+      setLikeCount(count)
+      setIsLiked(liked)
+    })()
+    return () => {
+      cancelled = true
     }
-  }, [postId, user])
+  }, [postId, user?.id])
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (!user) {
       toast({
         title: "Inicia sesión",
@@ -86,52 +81,30 @@ export default function PostActions({
       return
     }
 
-    const userId = user.email || user.username || 'default'
-    const newIsLiked = !isLiked
-    const newLikeCount = newIsLiked ? likeCount + 1 : Math.max(0, likeCount - 1)
-    
-    setIsLiked(newIsLiked)
-    setLikeCount(newLikeCount)
+    const prevLiked = isLiked
+    const prevCount = likeCount
+    const nextLiked = !prevLiked
+    const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1))
 
-    // Guardar en localStorage
-    if (typeof window !== 'undefined') {
-      // Guardar estado de "me gusta" del usuario
-      const savedLikes = localStorage.getItem(`likedPosts_${userId}`)
-      let liked: string[] = []
-      
-      if (savedLikes) {
-        try {
-          liked = JSON.parse(savedLikes)
-        } catch (error) {
-          console.error('Error al leer likes:', error)
-        }
-      }
+    setIsLiked(nextLiked)
+    setLikeCount(nextCount)
 
-      if (newIsLiked) {
-        if (!liked.includes(postId)) {
-          liked.push(postId)
-        }
-      } else {
-        liked = liked.filter(id => id !== postId)
-      }
-      
-      localStorage.setItem(`likedPosts_${userId}`, JSON.stringify(liked))
-      
-      // Guardar contador global de likes (suma de todos los usuarios)
-      const savedPostLikes = localStorage.getItem('postLikes_global')
-      let postLikes: { [key: string]: number } = {}
-      
-      if (savedPostLikes) {
-        try {
-          postLikes = JSON.parse(savedPostLikes)
-        } catch (error) {
-          console.error('Error al leer contadores globales:', error)
-        }
-      }
-      
-      postLikes[postId] = newLikeCount
-      localStorage.setItem('postLikes_global', JSON.stringify(postLikes))
+    const supabase = createClient()
+    const { liked, error } = await togglePostLike(supabase, postId)
+    if (error) {
+      setIsLiked(prevLiked)
+      setLikeCount(prevCount)
+      toast({
+        title: 'No se pudo actualizar el like',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
     }
+
+    const { count } = await getPostLikeCount(supabase, postId)
+    setIsLiked(liked)
+    setLikeCount(count)
   }
 
   const handleComment = () => {
@@ -162,7 +135,7 @@ export default function PostActions({
       return
     }
 
-    setComments((data as PostCommentRow[]) ?? [])
+    setComments(((data ?? []) as any[]).map(normalizePostCommentRow))
   }
 
   useEffect(() => {

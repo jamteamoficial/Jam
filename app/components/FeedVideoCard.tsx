@@ -5,15 +5,15 @@ import { Music } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import PostActions from '@/app/components/PostActions'
 import LazyVideo from '@/app/components/LazyVideo'
-import type { MockPost } from '@/app/data/mockPosts'
+import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 
 interface FeedVideoCardProps {
-  post: MockPost
+  post: FeedDisplayPost
   onJam: (postId: string, usuario: string) => void
   canManage?: boolean
-  onEditPost?: (post: MockPost) => void
-  onDeletePost?: (post: MockPost) => void
+  onEditPost?: (post: FeedDisplayPost) => void
+  onDeletePost?: (post: FeedDisplayPost) => void
 }
 
 export default function FeedVideoCard({

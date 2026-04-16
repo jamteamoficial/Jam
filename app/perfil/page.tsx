@@ -245,15 +245,16 @@ function PerfilContent() {
     const supabase = createClient()
     const { error } = await supabase
       .from('profiles')
-      .update({
+      .upsert({
+        id: user.id,
+        email: user.email ?? null,
         full_name: quickForm.full_name.trim(),
         username: normalizedUsername,
         bio: quickForm.bio.trim() || null,
         ciudad: quickForm.ciudad.trim() || null,
         instrumentos: instrumentos.length > 0 ? instrumentos : null,
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id)
+      }, { onConflict: 'id' })
 
     setQuickLoading(false)
     if (error) {
@@ -392,7 +393,6 @@ function PerfilContent() {
                 required={isOnboarding}
                 className="w-full px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
                 placeholder="Santiago"
-                required
               />
             </div>
             <div>

@@ -1,567 +1,296 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Send } from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
-import { supabase } from '@/src/lib/supabase/client'
-import { markIncomingMessagesRead } from '@/src/lib/services/conversation-messages'
+import { useToast } from '@/src/lib/hooks/use-toast'
+import { createClient } from '@/src/lib/supabase/client'
+import { listDirectMessagesThread, sendMessage } from '@/src/lib/services/jam-social'
+import { getDisplayName } from '@/src/lib/userDisplay'
 
-interface Message {
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+type UiMessage = {
   id: string
   text: string
   sender: 'user' | 'other'
   timestamp: string
-  created_at?: string
-  sender_id?: string
-}
-
-interface ConversationData {
-  usuario: string
-  avatar: string
-  otherUserId: string
-}
-
-// Datos de ejemplo para chats mock
-const mockChatsData: { [key: string]: { usuario: string; avatar: string; initialMessages: any[] } } = {
-  'mock-1': {
-    usuario: 'Sembrador',
-    avatar: '🎸',
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Hola! ¿Tocamos juntos?',
-        sender_id: 'other',
-        created_at: new Date(Date.now() - 3600000).toISOString()
-      },
-      {
-        id: '2',
-        content: 'Me encantaría! ¿Qué instrumento tocas?',
-        sender_id: 'user',
-        created_at: new Date(Date.now() - 3300000).toISOString()
-      }
-    ]
-  },
-  'mock-2': {
-    usuario: 'Carlos Rock',
-    avatar: '🥁',
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Perfecto, nos vemos mañana',
-        sender_id: 'other',
-        created_at: new Date(Date.now() - 7200000).toISOString()
-      }
-    ]
-  },
-  'mock-3': {
-    usuario: 'Mariana Luna',
-    avatar: '🎤',
-    initialMessages: [
-      {
-        id: '1',
-        content: '¿Hacemos una sesión de grabación?',
-        sender_id: 'other',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      }
-    ]
-  },
-  'mock-4': {
-    usuario: 'Juan Pérez',
-    avatar: '🎹',
-    initialMessages: [
-      {
-        id: '1',
-        content: 'El ensayo fue increíble, gracias!',
-        sender_id: 'other',
-        created_at: new Date(Date.now() - 86400000).toISOString()
-      }
-    ]
-  },
-  'mock-5': {
-    usuario: 'Ana Jazz',
-    avatar: '🎺',
-    initialMessages: [
-      {
-        id: '1',
-        content: '¿Tocamos jazz este fin de semana?',
-        sender_id: 'other',
-        created_at: new Date(Date.now() - 1800000).toISOString()
-      }
-    ]
-  },
-  'mock-6': {
-    usuario: 'Pedro DJ',
-    avatar: '🎧',
-    initialMessages: [
-      {
-        id: '1',
-        content: 'Voy a subir la nueva mezcla',
-        sender_id: 'other',
-        created_at: new Date(Date.now() - 5400000).toISOString()
-      }
-    ]
-  }
 }
 
 export default function ChatPage() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
-  const conversationId = params?.id as string
+  const { toast } = useToast()
+
+  const partnerId = String(params?.id ?? '')
 
   const [loading, setLoading] = useState(true)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [exists, setExists] = useState<boolean | null>(null)
-  const [messages, setMessages] = useState<any[]>([])
+  const [peerName, setPeerName] = useState('Usuario')
+  const [peerAvatar, setPeerAvatar] = useState<string>('')
+  const [messages, setMessages] = useState<UiMessage[]>([])
   const [text, setText] = useState('')
-  const [chatData, setChatData] = useState<ConversationData | null>(null)
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const channelRef = useRef<any>(null)
 
-  // Obtener el ID del usuario actual
+  const bottomRef = useRef<HTMLDivElement | null>(null)
+
+  const myId = user?.id ?? null
+
+  const invalidPartner = useMemo(() => !partnerId || !isUuid(partnerId), [partnerId])
+
   useEffect(() => {
-    const getUserId = async () => {
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-      if (supabaseUser) {
-        setCurrentUserId(supabaseUser.id)
-      }
-    }
-    getUserId()
-  }, [])
+    if (myId) return
+    router.replace('/login')
+  }, [myId, router])
 
-  // 1) Validar que la conversación exista en Supabase o sea un chat mock
   useEffect(() => {
-    if (!conversationId) return
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
 
-    const checkConversation = async () => {
-      setLoading(true)
-      setErrorMsg(null)
-
-      // Si es un chat mock, cargar datos de ejemplo
-      if (conversationId.startsWith('mock-')) {
-        const mockData = mockChatsData[conversationId]
-        if (mockData) {
-          setExists(true)
-          setChatData({
-            usuario: mockData.usuario,
-            avatar: mockData.avatar,
-            otherUserId: 'mock-user'
-          })
-          
-          // Cargar mensajes desde localStorage o usar iniciales
-          if (typeof window !== 'undefined') {
-            const savedMessages = localStorage.getItem(`chat_${conversationId}`)
-            if (savedMessages) {
-              try {
-                const parsed = JSON.parse(savedMessages)
-                setMessages(parsed)
-              } catch (error) {
-                console.error('Error al cargar mensajes:', error)
-                setMessages(mockData.initialMessages)
-              }
-            } else {
-              setMessages(mockData.initialMessages)
-            }
-          }
-          
-          setLoading(false)
-          return
-        } else {
-          setExists(false)
-          setLoading(false)
-          return
-        }
-      }
-
-      // Si no es mock, buscar en Supabase
-      const { data, error } = await supabase
-        .from("conversations")
-        .select("id")
-        .eq("id", conversationId)
-        .single()
-
-      if (error) {
-        // Muy común: RLS o permisos
-        setErrorMsg(error.message)
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (invalidPartner) {
         setExists(false)
         setLoading(false)
         return
       }
 
-      if (!data) {
+      setLoading(true)
+      const supabase = createClient()
+
+      const { data: peer, error: peerErr } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .eq('id', partnerId)
+        .maybeSingle()
+
+      if (cancelled) return
+      if (peerErr || !peer) {
         setExists(false)
         setLoading(false)
         return
       }
 
       setExists(true)
-      // Inicializar chatData con valores por defecto para que el render pueda proceder
-      setChatData({
-        usuario: 'Usuario',
-        avatar: '🎸',
-        otherUserId: ''
-      })
-      setLoading(false)
-    }
+      setPeerName(getDisplayName(peer.full_name as string | null, peer.username as string | null))
+      setPeerAvatar((peer.avatar_url as string | null) || '')
 
-    checkConversation()
-  }, [conversationId])
-
-  // 2) Cargar mensajes al abrir el chat (solo para chats reales de Supabase)
-  useEffect(() => {
-    if (!conversationId || exists !== true || conversationId.startsWith('mock-')) return
-
-    const loadMessages = async () => {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true })
-
-      if (error) {
+      if (!myId) {
+        setMessages([])
+        setLoading(false)
         return
       }
 
-      const rows = data ?? []
-      setMessages(rows)
+      const { data: rows, error } = await listDirectMessagesThread(supabase, { otherUserId: partnerId, limit: 300 })
+      if (cancelled) return
 
-      const {
-        data: { user: reader },
-      } = await supabase.auth.getUser()
-      if (reader?.id && rows.length > 0) {
-        await markIncomingMessagesRead(supabase, {
-          conversationId,
-          readerId: reader.id,
-        })
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.sender_id !== reader.id ? { ...m, is_read: true } : m
-          )
-        )
+      if (error) {
+        console.error('[chat] Error cargando DMs', error)
+        setMessages([])
+        setLoading(false)
+        return
       }
 
-      // Cargar información del otro participante (opcional, para UI)
-      try {
-        const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-        if (supabaseUser) {
-          const userId = supabaseUser.id
-          const { data: participants } = await supabase
-            .from('conversation_participants')
-            .select('user_id')
-            .eq('conversation_id', conversationId)
+      const mapped: UiMessage[] = (rows as any[]).map((m) => ({
+        id: String(m.id),
+        text: String(m.content ?? ''),
+        sender: m.sender_id === myId ? 'user' : 'other',
+        timestamp: m.created_at
+          ? new Date(m.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+          : '',
+      }))
 
-          const otherParticipant = participants?.find(p => p.user_id !== userId)
-          if (otherParticipant) {
-            let otherUserName = 'Usuario'
-            let otherUserAvatar = '🎸'
+      setMessages(mapped)
+      setLoading(false)
+    })()
 
-            try {
-              const { data: otherUser } = await supabase
-                .from('profiles')
-                .select('username, full_name, avatar_url')
-                .eq('id', otherParticipant.user_id)
-                .single()
-
-              if (otherUser) {
-                otherUserName =
-                  otherUser.full_name ||
-                  otherUser.username ||
-                  'Usuario'
-                otherUserAvatar = otherUser.avatar_url || '🎸'
-              }
-            } catch (error) {
-              // Usar valores por defecto si no hay perfil
-            }
-
-            setChatData({
-              usuario: otherUserName,
-              avatar: otherUserAvatar,
-              otherUserId: otherParticipant.user_id
-            })
-          }
-        }
-      } catch (error) {
-        // Mantener valores por defecto
-      }
+    return () => {
+      cancelled = true
     }
+  }, [invalidPartner, partnerId, myId])
 
-    loadMessages()
-  }, [conversationId, exists])
-
-  // 3) Realtime – recibir mensajes nuevos (solo para chats reales)
   useEffect(() => {
-    if (!conversationId || exists !== true || conversationId.startsWith('mock-')) return
-
+    if (!partnerId || !myId) return
+    const supabase = createClient()
     const channel = supabase
-      .channel(`messages-${conversationId}`)
+      .channel(`dm-${myId}-${partnerId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
+          table: 'direct_messages',
         },
         (payload) => {
-          const row = payload.new as { id?: string; sender_id?: string }
+          const row = payload.new as {
+            id: string
+            sender_id: string
+            receiver_id: string
+            content: string | null
+            created_at: string | null
+          }
+          const isThisThread =
+            (row.sender_id === myId && row.receiver_id === partnerId) ||
+            (row.sender_id === partnerId && row.receiver_id === myId)
+          if (!isThisThread) return
+
           setMessages((prev) => {
-            if (row.id && prev.find((m) => m.id === row.id)) return prev
-            return [...prev, payload.new]
+            if (prev.some((m) => m.id === row.id)) return prev
+            return [
+              ...prev,
+              {
+                id: row.id,
+                text: String(row.content ?? ''),
+                sender: row.sender_id === myId ? 'user' : 'other',
+                timestamp: row.created_at
+                  ? new Date(row.created_at).toLocaleTimeString('es-CL', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : '',
+              },
+            ]
           })
-          void (async () => {
-            const {
-              data: { user: u },
-            } = await supabase.auth.getUser()
-            if (u?.id && row.sender_id && row.sender_id !== u.id) {
-              await markIncomingMessagesRead(supabase, {
-                conversationId,
-                readerId: u.id,
-              })
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.sender_id !== u.id ? { ...m, is_read: true } : m
-                )
-              )
-            }
-          })()
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const row = payload.new as { id?: string }
-          if (!row?.id) return
-          setMessages((prev) =>
-            prev.map((m) => (m.id === row.id ? { ...m, ...payload.new } : m))
-          )
         }
       )
       .subscribe()
 
-    channelRef.current = channel
-
     return () => {
-      supabase.removeChannel(channel)
+      void supabase.removeChannel(channel)
     }
-  }, [conversationId, exists])
+  }, [partnerId, myId])
 
-  // Guardar mensajes de chats mock en localStorage
-  useEffect(() => {
-    if (conversationId?.startsWith('mock-') && messages.length > 0 && typeof window !== 'undefined') {
-      localStorage.setItem(`chat_${conversationId}`, JSON.stringify(messages))
-    }
-  }, [messages, conversationId])
-
-  // Scroll automático al agregar mensajes
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  // 4) Enviar mensaje
-  const sendMessage = async () => {
+  const handleSend = async () => {
     const content = text.trim()
-    if (!content || !conversationId) return
+    if (!content) return
 
-    // Si es un chat mock, guardar en localStorage
-    if (conversationId.startsWith('mock-')) {
-      const newMessage = {
-        id: Date.now().toString(),
-        content,
-        sender_id: 'user',
-        created_at: new Date().toISOString()
-      }
-      
-      setMessages((prev) => [...prev, newMessage])
-      setText('')
-      
-      // Focus en el input después de enviar
-      setTimeout(() => {
-        const input = document.querySelector('input[type="text"]') as HTMLInputElement
-        input?.focus()
-      }, 100)
+    if (!myId) {
+      router.push('/login')
       return
     }
 
-    // Si no es mock, enviar a Supabase
-    // Obtener el ID del usuario desde Supabase Auth
-    const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-    const senderId = supabaseUser?.id ?? 'demo-user'
+    if (invalidPartner || exists === false) return
 
-    const { error } = await supabase.from('messages').insert({
-      conversation_id: conversationId,
-      sender_id: senderId,
-      content,
-      is_read: false,
-    })
-
+    const supabase = createClient()
+    const { data, error } = await sendMessage(supabase, { receiver_id: partnerId, content })
     if (error) {
+      toast({
+        title: 'No se pudo enviar',
+        description: error.message,
+        variant: 'destructive',
+      })
       return
     }
 
     setText('')
-    // Focus en el input después de enviar
-    setTimeout(() => {
-      const input = document.querySelector('input[type="text"]') as HTMLInputElement
-      input?.focus()
-    }, 100)
+    const row = data as any
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: String(row.id),
+        text: String(row.content ?? content),
+        sender: 'user',
+        timestamp: row.created_at
+          ? new Date(row.created_at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+          : '',
+      },
+    ])
   }
 
-  // Render: loading y error
   if (loading) {
     return (
-      <div style={{ padding: 24 }}>
-        <h2>Cargando conversación…</h2>
-        {errorMsg && <p style={{ color: "red" }}>Error: {errorMsg}</p>}
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 px-6">
+        <p className="text-gray-700">Cargando conversación…</p>
       </div>
     )
   }
 
   if (exists === false) {
     return (
-      <div style={{ padding: 24 }}>
-        <h2>Chat no encontrado</h2>
-        {errorMsg && <p style={{ color: "red" }}>Error: {errorMsg}</p>}
-      </div>
-    )
-  }
-
-  // Si existe, renderiza chat (mantener UI existente)
-  // chatData se inicializa con valores por defecto cuando exists === true
-  // y se actualiza con datos reales cuando están disponibles
-  if (!chatData) {
-    // Fallback: si por alguna razón chatData es null, mostrar loading
-    return (
-      <div style={{ padding: 24 }}>
-        <h2>Cargando datos del chat…</h2>
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 px-6">
+        <div className="max-w-lg text-center">
+          <h2 className="mb-2 text-2xl font-bold text-gray-900">Chat no encontrado</h2>
+          <p className="mb-6 text-sm text-gray-600">El destinatario no existe o el identificador no es válido.</p>
+          <Button onClick={() => router.push('/')} className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
+            Volver al inicio
+          </Button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white">
-      {/* Header */}
-      <div className="border-b-2 border-rolex/30 p-4 bg-white">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+      <div className="mx-auto flex h-[calc(100vh-4rem)] max-w-3xl flex-col px-4 py-6">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <Button variant="ghost" onClick={() => router.back()} className="inline-flex items-center gap-2" style={{ color: 'var(--rolex)' }}>
+            <ArrowLeft className="h-4 w-4" />
+            Volver
           </Button>
-          <div className="w-12 h-12 rounded-full bg-rolex flex items-center justify-center text-2xl">
-            {chatData.avatar}
-          </div>
-          <div>
-            <h2 className="font-bold text-xl text-gray-900">{chatData.usuario}</h2>
-            <p className="text-sm text-gray-500">En línea</p>
+          <div className="min-w-0 text-right">
+            <div className="flex items-center justify-end gap-2">
+              {peerAvatar && /^https?:\/\//i.test(peerAvatar) ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={peerAvatar} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200" />
+              ) : (
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-rolex/15 text-xs font-bold text-rolex">
+                  {peerName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <div className="min-w-0 text-right">
+                <p className="truncate text-sm font-semibold text-gray-900">{peerName}</p>
+                <p className="truncate text-xs text-gray-500">Mensaje directo</p>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-rolex flex items-center justify-center text-3xl mb-4">
-              {chatData.avatar}
-            </div>
-            <p className="text-gray-600">Inicia la conversación con {chatData.usuario}</p>
-          </div>
-        ) : (
-          messages.map((message) => {
-            // Determinar si el mensaje es del usuario actual
-            // Para chats mock, usar 'user' como identificador
-            const isUser = conversationId?.startsWith('mock-') 
-              ? message.sender_id === 'user'
-              : message.sender_id === currentUserId
-            
-            return (
-              <div
-                key={message.id}
-                className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-sm ${
-                    isUser
-                      ? 'bg-rolex text-white'
-                      : 'bg-white text-gray-900 border-2 border-rolex/30'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-rolex/20 bg-white shadow-xl">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+            {messages.length === 0 ? (
+              <div className="py-16 text-center text-sm text-gray-600">Aún no hay mensajes. ¡Rompe el hielo!</div>
+            ) : (
+              messages.map((m) => (
+                <div key={m.id} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`mt-1 flex items-center justify-end gap-2 text-xs ${
-                      isUser ? 'text-white/80' : 'text-gray-500'
+                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
+                      m.sender === 'user' ? 'bg-[var(--rolex)] text-white' : 'bg-gray-100 text-gray-900'
                     }`}
                   >
-                    <span>
-                      {new Date(message.created_at).toLocaleTimeString('es-CL', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </span>
-                    {isUser && !conversationId?.startsWith('mock-') && (
-                      <span className="font-medium opacity-90">
-                        {message.is_read ? 'Visto' : 'Entregado'}
-                      </span>
-                    )}
+                    <div className="whitespace-pre-wrap leading-relaxed">{m.text}</div>
+                    {m.timestamp ? (
+                      <div className={`mt-1 text-[10px] ${m.sender === 'user' ? 'text-white/80' : 'text-gray-500'}`}>{m.timestamp}</div>
+                    ) : null}
                   </div>
                 </div>
-              </div>
-            )
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+              ))
+            )}
+            <div ref={bottomRef} />
+          </div>
 
-      {/* Input */}
-      <div className="border-t-2 border-rolex/30 p-4 bg-white">
-        {!user ? (
-          <div className="text-center py-4">
-            <p className="text-gray-600 mb-2">Inicia sesión para enviar mensajes</p>
-            <Button
-              onClick={() => router.push('/')}
-              className="text-white hover:opacity-90"
-              style={{ backgroundColor: 'var(--rolex)' }}
-            >
-              Iniciar Sesión
-            </Button>
+          <div className="border-t border-rolex/10 p-3">
+            <div className="flex items-center gap-2">
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="Escribe un mensaje…"
+                className="min-w-0 flex-1 rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-rolex"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void handleSend()
+                }}
+              />
+              <Button onClick={() => void handleSend()} className="text-white hover:opacity-90" style={{ backgroundColor: 'var(--rolex)' }}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        ) : (
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault()
-                  sendMessage()
-                }
-              }}
-              placeholder="Escribe un mensaje..."
-              className="flex-1 px-4 py-3 border-2 border-rolex/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-rolex"
-              autoFocus
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={!text.trim()}
-              className="text-white px-6 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90"
-              style={{ backgroundColor: 'var(--rolex)' }}
-            >
-              <Send className="w-5 h-5" />
-            </Button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )

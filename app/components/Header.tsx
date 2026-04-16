@@ -4,9 +4,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
-import { Music, User, LogIn, LogOut, Search } from 'lucide-react'
+import { Music, LogIn, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import GoogleLogin from '../../components/GoogleLogin'
 import NotificationsBell from '@/app/components/NotificationsBell'
 import { createClient } from '@/src/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -48,6 +47,8 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   }, [supabase])
 
   const isAuthenticated = !!supabaseUser
+  const avatarUrl = supabaseUser?.user_metadata?.avatar_url as string | undefined
+  const avatarFallback = (supabaseUser?.email?.[0] || 'U').toUpperCase()
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -141,46 +142,40 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
 
           {/* Navegación derecha */}
           <div className="flex items-center gap-3">
-            {/* Botón Google Login */}
-            <div className="scale-75 origin-center">
-              <GoogleLogin />
-            </div>
-            
-            {/* Botón Perfil - basado en sesión real de Supabase */}
             {!loading && (
               <>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (isAuthenticated) {
-                      router.push('/perfil')
-                    } else {
-                      router.push('/login')
-                    }
-                  }}
-                  className="flex items-center gap-2 font-semibold hover:opacity-80"
-                  style={{ color: 'var(--rolex)' }}
-                >
-                  <User className="w-4 h-4" />
-                  <span className="hidden sm:inline">Perfil</span>
-                </Button>
-
                 {isAuthenticated ? (
                   <>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/perfil')}
+                      className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-rolex/30 bg-rolex/10 transition hover:opacity-90"
+                      aria-label="Ir a mi perfil"
+                    >
+                      {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs font-bold text-rolex">{avatarFallback}</span>
+                      )}
+                    </button>
                     <NotificationsBell />
-                  <Button 
-                    variant="outline" 
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 border-2 hover:opacity-90"
-                    style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span className="hidden sm:inline">Cerrar sesión</span>
-                  </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 border-2 hover:opacity-90"
+                      style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden sm:inline">Cerrar sesión</span>
+                    </Button>
                   </>
                 ) : (
                   <Button
-                    onClick={onLoginClick}
+                    onClick={() => {
+                      onLoginClick?.()
+                      router.push('/login')
+                    }}
                     className="text-white flex items-center gap-2 shadow-lg hover:opacity-90"
                     style={{ backgroundColor: 'var(--rolex)' }}
                   >

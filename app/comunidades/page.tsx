@@ -13,89 +13,6 @@ import {
 } from '@/src/lib/services/communities'
 import { useAuth } from '@/app/context/AuthContext'
 
-const COMUNIDADES = [
-  { 
-    id: 'audiciones',
-    nombre: 'Audiciones', 
-    icono: '🎤', 
-    descripcion: 'Encuentra audiciones y oportunidades para músicos', 
-    color: 'purple',
-    miembros: '1.2k'
-  },
-  { 
-    id: 'clases',
-    nombre: 'Aprender Música', 
-    icono: '🎓', 
-    descripcion: 'Clases, tutoriales y aprendizaje musical', 
-    color: 'blue',
-    miembros: '2.5k'
-  },
-  { 
-    id: 'rock',
-    nombre: 'Rock & Bandas', 
-    icono: '🎸', 
-    descripcion: 'Para bandas de rock y músicos del género', 
-    color: 'red',
-    miembros: '3.1k'
-  },
-  { 
-    id: 'emergentes',
-    nombre: 'Bandas Emergentes', 
-    icono: '🚀', 
-    descripcion: 'Bandas nuevas buscando crecer y conectar', 
-    color: 'green',
-    miembros: '1.8k'
-  },
-  { 
-    id: 'productores',
-    nombre: 'Productores & Beats', 
-    icono: '🎧', 
-    descripcion: 'Productores y creadores de beats', 
-    color: 'yellow',
-    miembros: '2.2k'
-  },
-  { 
-    id: 'jams',
-    nombre: 'Jams & Sesiones', 
-    icono: '🥁', 
-    descripcion: 'Jams en vivo y sesiones improvisadas', 
-    color: 'orange',
-    miembros: '1.5k'
-  },
-  { 
-    id: 'jazz',
-    nombre: 'Jazz & Blues', 
-    icono: '🎹', 
-    descripcion: 'Comunidad de jazz, blues y música clásica', 
-    color: 'indigo',
-    miembros: '890'
-  },
-  { 
-    id: 'electronica',
-    nombre: 'Música Electrónica', 
-    icono: '⚡', 
-    descripcion: 'DJs, productores y amantes de la electrónica', 
-    color: 'pink',
-    miembros: '1.9k'
-  },
-  { 
-    id: 'folk',
-    nombre: 'Folk & Acústico', 
-    icono: '🎻', 
-    descripcion: 'Música acústica, folk y sonidos orgánicos', 
-    color: 'teal',
-    miembros: '1.1k'
-  },
-  { 
-    id: 'hiphop',
-    nombre: 'Hip-Hop & Rap', 
-    icono: '🎤', 
-    descripcion: 'Rappers, MCs y productores de hip-hop', 
-    color: 'purple',
-    miembros: '2.3k'
-  }
-]
-
 const getColorClasses = (color: string) => {
   const colors: Record<string, string> = {
     purple: 'from-rolex to-rolex-light',
@@ -113,7 +30,9 @@ const getColorClasses = (color: string) => {
 
 export default function ComunidadesPage() {
   const { user } = useAuth()
-  const [communities, setCommunities] = useState(COMUNIDADES)
+  const [communities, setCommunities] = useState<
+    { id: string; nombre: string; icono: string; descripcion: string; color: string; miembros: string }[]
+  >([])
 
   useEffect(() => {
     let cancelled = false
@@ -123,9 +42,9 @@ export default function ComunidadesPage() {
         listCommunities(supabase),
         getCommunityMemberCountMap(supabase),
       ])
-      if (cancelled || !data || data.length === 0) return
+      if (cancelled) return
       setCommunities(
-        (data as CommunityRow[]).map((c) => ({
+        ((data ?? []) as CommunityRow[]).map((c) => ({
           id: c.id,
           nombre: c.name,
           icono: c.icon || '🎵',
@@ -164,6 +83,12 @@ export default function ComunidadesPage() {
 
         {/* Grid de Comunidades */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {communities.length === 0 ? (
+            <div className="col-span-full rounded-2xl border border-dashed border-rolex/25 bg-white/70 p-10 text-center">
+              <p className="text-sm text-gray-700">Aún no hay comunidades</p>
+              <p className="mt-2 text-xs text-gray-500">Crea una desde el panel lateral en el home, o ejecuta las migraciones en Supabase.</p>
+            </div>
+          ) : null}
           {communities.map((comunidad) => (
             <div 
               key={comunidad.id}
