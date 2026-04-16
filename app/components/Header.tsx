@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 import { Music, LogIn, LogOut, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import GoogleLogin from '../../components/GoogleLogin'
 import NotificationsBell from '@/app/components/NotificationsBell'
 import { createClient } from '@/src/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
@@ -171,18 +172,23 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    onClick={() => {
-                      onLoginClick?.()
-                      router.push('/login')
-                    }}
-                    className="text-white flex items-center gap-2 shadow-lg hover:opacity-90"
-                    style={{ backgroundColor: 'var(--rolex)' }}
-                  >
-                    <LogIn className="w-4 h-4" />
-                    <span className="hidden sm:inline">Iniciar sesión</span>
-                    <span className="sm:hidden">Entrar</span>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="origin-center scale-75">
+                      <GoogleLogin />
+                    </div>
+                    <Button
+                      onClick={() => {
+                        onLoginClick?.()
+                        router.push('/login')
+                      }}
+                      className="text-white flex items-center gap-2 shadow-lg hover:opacity-90"
+                      style={{ backgroundColor: 'var(--rolex)' }}
+                    >
+                      <LogIn className="w-4 h-4" />
+                      <span className="hidden sm:inline">Iniciar sesión</span>
+                      <span className="sm:hidden">Entrar</span>
+                    </Button>
+                  </div>
                 )}
               </>
             )}
