@@ -21,4 +21,6 @@ export type FeedDisplayPost = {
   thumbnail_url?: string
   estado?: string
   created_at?: string
+  /** Conteo desde la query del feed (`post_likes(count)`); evita segunda petición que pueda fallar para anon. */
+  likeCount?: number
 }

@@ -5,8 +5,11 @@ export type FeedPostRow = {
   id: string
   user_id: string
   video_url: string
+  thumbnail_url?: string | null
   description: string | null
   created_at: string
+  /** Agregado opcional desde `post_likes(count)` en el mismo SELECT que el post. */
+  post_likes?: { count: number }[] | null
   profiles: {
     id: string
     username: string | null
@@ -33,37 +36,34 @@ export type PostCommentRow = {
 }
 
 /**
- * Feed principal: posts ordenados por fecha + datos públicos del perfil.
- * Usar con cliente browser (createBrowserClient) o servidor (createServerClient).
+ * Feed: posts + autor + conteo de likes en una sola petición.
+ * `profiles!posts_user_id_fkey` = perfil del autor (`posts.user_id` → `profiles.id`).
+ * `post_likes(count)` agrega likes por `post_id` (un solo FK típico post_likes → posts).
+ * Nombre `posts_user_id_fkey`: constraint por defecto de PostgreSQL en `posts(user_id)`; renómbralo en BD si difiere.
  */
+export const POSTS_FEED_SELECT = `
+  *,
+  profiles!posts_user_id_fkey (
+    id,
+    username,
+    full_name,
+    ciudad,
+    avatar_url,
+    bio,
+    instrumentos
+  ),
+  post_likes(count)
+`
+
 export async function getFeed(
   supabase: SupabaseClient,
   options?: { limit?: number }
 ) {
   const limit = options?.limit ?? 30
 
-  return supabase
-    .from('posts')
-    .select(
-      `
-      id,
-      user_id,
-      video_url,
-      description,
-      created_at,
-      profiles (
-        id,
-        username,
-        full_name,
-        ciudad,
-        avatar_url,
-        bio,
-        instrumentos
-      )
-    `
-    )
-    .order('created_at', { ascending: false })
-    .limit(limit)
+  // `*` en posts evita error 400 si aún no existe la columna `thumbnail_url` en la BD.
+  // `post_likes(count)` trae el total de likes en la misma respuesta (no bloquea multimedia si falla el conteo).
+  return supabase.from('posts').select(POSTS_FEED_SELECT).order('created_at', { ascending: false }).limit(limit)
 }
 
 export async function getFeedByUserIds(
@@ -76,24 +76,7 @@ export async function getFeedByUserIds(
   const limit = input.limit ?? 50
   return supabase
     .from('posts')
-    .select(
-      `
-      id,
-      user_id,
-      video_url,
-      description,
-      created_at,
-      profiles (
-        id,
-        username,
-        full_name,
-        ciudad,
-        avatar_url,
-        bio,
-        instrumentos
-      )
-    `
-    )
+    .select(POSTS_FEED_SELECT)
     .in('user_id', input.userIds)
     .order('created_at', { ascending: false })
     .limit(limit)
@@ -104,7 +87,7 @@ export async function getFeedByUserIds(
  */
 export async function createPost(
   supabase: SupabaseClient,
-  input: { video_url: string; description?: string | null }
+  input: { video_url: string; description?: string | null; thumbnail_url?: string | null }
 ) {
   const {
     data: { user },
@@ -121,6 +104,7 @@ export async function createPost(
       user_id: user.id,
       video_url: input.video_url,
       description: input.description ?? null,
+      thumbnail_url: input.thumbnail_url ?? null,
     })
     .select()
     .single()
@@ -177,7 +161,7 @@ export async function getCommentsByPost(
       user_id,
       content,
       created_at,
-      profiles (
+      profiles!comments_user_id_fkey (
         id,
         username,
         full_name,
@@ -443,24 +427,36 @@ export async function togglePostLike(
   return { liked: true, error: error ? new Error(error.message) : null }
 }
 
+/**
+ * Conteo real de filas en `post_likes` por cada `post_id`.
+ * Usa `count: 'exact'` por post (no depende del límite de filas devueltas por `.select()`).
+ * Válido para sesión autenticada o `anon` (si RLS permite SELECT).
+ */
 export async function countLikesForPosts(supabase: SupabaseClient, postIds: string[]) {
-  if (postIds.length === 0) {
+  const unique = [...new Set(postIds.filter(Boolean))]
+  if (unique.length === 0) {
     return { data: {} as Record<string, number>, error: null }
   }
 
-  const { data, error } = await supabase.from('post_likes').select('post_id').in('post_id', postIds)
+  const results = await Promise.all(
+    unique.map(async (id) => {
+      const { count, error } = await getPostLikeCount(supabase, id)
+      return { id, count, error }
+    })
+  )
 
-  if (error) {
-    return { data: null, error: new Error(error.message) }
+  const data: Record<string, number> = {}
+  let firstError: Error | null = null
+  for (const r of results) {
+    if (r.error) {
+      firstError = firstError ?? r.error
+      data[r.id] = 0
+    } else {
+      data[r.id] = r.count
+    }
   }
 
-  const counts: Record<string, number> = {}
-  for (const row of data ?? []) {
-    const id = row.post_id as string
-    counts[id] = (counts[id] ?? 0) + 1
-  }
-
-  return { data: counts, error: null }
+  return { data, error: firstError }
 }
 
 export async function countFollowers(supabase: SupabaseClient, userId: string) {

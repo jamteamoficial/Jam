@@ -10,15 +10,24 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import { createClient } from '@/src/lib/supabase/client'
-import { createComment, getCommentsByPost, type PostCommentRow } from '@/src/lib/services/jam-social'
+import {
+  createComment,
+  getCommentsByPost,
+  POSTS_FEED_SELECT,
+  type PostCommentRow,
+} from '@/src/lib/services/jam-social'
+import { parsePostLikeCountFromRow } from '@/src/lib/feed/postLikeCount'
+import { hasPlayableVideoUrl } from '@/src/lib/feed/hasPlayableVideoUrl'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 
 type PostRow = {
   id: string
   user_id: string
   video_url: string
+  thumbnail_url: string | null
   description: string | null
   created_at: string
+  likeCount: number
   profiles: {
     id: string
     username: string | null
@@ -29,7 +38,12 @@ type PostRow = {
 
 function normalizePostRow(row: any): PostRow {
   const profiles = Array.isArray(row?.profiles) ? row.profiles[0] : row?.profiles
-  return { ...row, profiles } as PostRow
+  return {
+    ...row,
+    profiles,
+    thumbnail_url: row?.thumbnail_url ?? null,
+    likeCount: parsePostLikeCountFromRow(row),
+  } as PostRow
 }
 
 function normalizeCommentRow(row: any): PostCommentRow {
@@ -70,21 +84,7 @@ export default function PostDetailPage() {
 
       const { data, error } = await supabase
         .from('posts')
-        .select(
-          `
-          id,
-          user_id,
-          video_url,
-          description,
-          created_at,
-          profiles (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `
-        )
+        .select(POSTS_FEED_SELECT)
         .eq('id', postId)
         .maybeSingle()
 
@@ -200,6 +200,7 @@ export default function PostDetailPage() {
                     postOwnerId={post.user_id}
                     ownerFullName={post.profiles?.full_name ?? null}
                     ownerUsername={post.profiles?.username ?? null}
+                    initialLikeCount={post.likeCount}
                   />
                 </div>
                 {post.description ? <p className="mt-4 whitespace-pre-wrap text-gray-800">{post.description}</p> : null}
@@ -208,9 +209,25 @@ export default function PostDetailPage() {
           </div>
 
           <div className="bg-black">
-            <video src={post.video_url} controls playsInline preload="metadata" className="max-h-[70vh] w-full">
-              Tu navegador no soporta la reproducción de video.
-            </video>
+            {hasPlayableVideoUrl(post.video_url) ? (
+              <video
+                src={post.video_url.trim()}
+                poster={post.thumbnail_url?.trim() || undefined}
+                controls
+                playsInline
+                preload="metadata"
+                className="max-h-[70vh] w-full"
+              >
+                Tu navegador no soporta la reproducción de video.
+              </video>
+            ) : post.thumbnail_url?.trim() ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={post.thumbnail_url.trim()}
+                alt=""
+                className="max-h-[70vh] w-full object-contain"
+              />
+            ) : null}
           </div>
 
           <div className="p-6">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import PostActions from '@/app/components/PostActions'
 import LazyVideo from '@/app/components/LazyVideo'
 import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
+import { hasPlayableVideoUrl } from '@/src/lib/feed/hasPlayableVideoUrl'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 
 interface FeedVideoCardProps {
@@ -24,7 +25,8 @@ export default function FeedVideoCard({
   onDeletePost,
 }: FeedVideoCardProps) {
   const videoUrl = post.video_url
-  const thumb = post.thumbnail_url
+  const thumb = post.thumbnail_url?.trim() ? post.thumbnail_url : undefined
+  const showVideo = hasPlayableVideoUrl(videoUrl)
   const displayName = getDisplayName(post.full_name, post.username || post.usuario)
   const handle = getHandle(post.username || post.usuario)
   const avatarText = getInitials(displayName)
@@ -71,16 +73,23 @@ export default function FeedVideoCard({
         </div>
       )}
 
-      {/* Video 16:9 o placeholder si no hay URL */}
+      {/* Video autoplay en feed, o solo imagen (post de texto), o vacío neutro */}
       <div className="p-4 pt-3 md:p-5 md:pt-4">
-        {videoUrl ? (
-          <LazyVideo src={videoUrl} poster={thumb} title={post.texto || post.usuario} />
+        {showVideo ? (
+          <LazyVideo
+            src={videoUrl!.trim()}
+            poster={thumb}
+            title={post.texto || post.usuario}
+            variant="feed"
+          />
+        ) : thumb ? (
+          <div className="aspect-video w-full overflow-hidden rounded-xl bg-black shadow-inner">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumb} alt="" className="h-full w-full object-cover" />
+          </div>
         ) : (
-          <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-gradient-to-br from-emerald-900/10 to-teal-900/10">
-            <div className="text-center px-4">
-              <Music className="mx-auto mb-2 h-10 w-10 opacity-40" style={{ color: 'var(--rolex)' }} />
-              <p className="text-sm text-gray-500">Sin video adjunto · publicación de texto</p>
-            </div>
+          <div className="flex aspect-video w-full items-center justify-center rounded-xl bg-neutral-100">
+            <p className="px-4 text-center text-sm text-neutral-500">Sin contenido multimedia</p>
           </div>
         )}
       </div>
@@ -113,6 +122,7 @@ export default function FeedVideoCard({
           ownerFullName={post.full_name || null}
           ownerUsername={post.username || null}
           ownerAvatarUrl={post.avatar_url || null}
+          initialLikeCount={typeof post.likeCount === 'number' ? post.likeCount : undefined}
         />
         <Button
           type="button"

@@ -27,7 +27,7 @@ import { createClient } from '@/src/lib/supabase/client'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 import { mapFeedPostRowToDisplayPost } from '@/src/lib/mapFeedPost'
 import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
-import { countFollowers, countFollowing, countLikesForPosts, toggleFollow } from '@/src/lib/services/jam-social'
+import { countFollowers, countFollowing, POSTS_FEED_SELECT, toggleFollow } from '@/src/lib/services/jam-social'
 import { createNotification } from '@/src/lib/services/notifications'
 
 function isUuid(value: string): boolean {
@@ -175,24 +175,7 @@ export default function UsuarioProfilePage() {
 
       const { data: postRows, error: postsError } = await supabase
         .from('posts')
-        .select(
-          `
-          id,
-          user_id,
-          video_url,
-          description,
-          created_at,
-          profiles (
-            id,
-            username,
-            full_name,
-            ciudad,
-            avatar_url,
-            bio,
-            instrumentos
-          )
-        `
-        )
+        .select(POSTS_FEED_SELECT)
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false })
 
@@ -206,9 +189,7 @@ export default function UsuarioProfilePage() {
       }
 
       const mappedPosts = (postRows as any[]).map((row) => mapFeedPostRowToDisplayPost(row, 'general'))
-      const ids = mappedPosts.map((p) => p.id)
-      const { data: likesMap } = await countLikesForPosts(supabase, ids)
-      const likeTotal = ids.reduce((sum, id) => sum + (likesMap?.[id] ?? 0), 0)
+      const likeTotal = mappedPosts.reduce((sum, p) => sum + (typeof p.likeCount === 'number' ? p.likeCount : 0), 0)
 
       setPosts(mappedPosts)
       setTotalLikes(likeTotal)
@@ -681,6 +662,7 @@ export default function UsuarioProfilePage() {
                           postOwnerId={profile.id}
                           ownerFullName={post.full_name ?? null}
                           ownerUsername={post.username ?? null}
+                          initialLikeCount={typeof post.likeCount === 'number' ? post.likeCount : undefined}
                         />
                         <Button
                           onClick={() => handleJam(post.id, post.usuario)}

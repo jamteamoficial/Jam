@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Heart, MessageCircle, Pencil, Trash2 } from 'lucide-react'
 import { useAuth } from '@/app/context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import { createClient } from '@/src/lib/supabase/client'
+import { cn } from '@/src/lib/utils'
 import {
   createComment,
   deleteComment,
@@ -34,6 +35,11 @@ interface PostActionsProps {
   ownerFullName?: string | null
   ownerUsername?: string | null
   ownerAvatarUrl?: string | null
+  /**
+   * Conteo desde la query del post (`post_likes(count)`). Si viene definido, no se hace
+   * `getPostLikeCount` aparte (evita fallos RLS / red que oculten el contenido del post).
+   */
+  initialLikeCount?: number
 }
 
 export default function PostActions({
@@ -42,11 +48,17 @@ export default function PostActions({
   postOwnerId,
   ownerFullName,
   ownerUsername,
+  ownerAvatarUrl: _ownerAvatarUrl,
+  initialLikeCount,
 }: PostActionsProps) {
   const { user } = useAuth()
   const { toast } = useToast()
+  const isGuest = !user?.id
   const [isLiked, setIsLiked] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
+  const [likeSubmitting, setLikeSubmitting] = useState(false)
+  const [heartPulse, setHeartPulse] = useState(false)
+  const heartPulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [commentsLoading, setCommentsLoading] = useState(false)
   const [comments, setComments] = useState<PostCommentRow[]>([])
@@ -58,39 +70,78 @@ export default function PostActions({
     let cancelled = false
     ;(async () => {
       const supabase = createClient()
-      const [{ count }, { liked }] = await Promise.all([
-        getPostLikeCount(supabase, postId),
-        getPostLikedByMe(supabase, postId),
-      ])
+
+      if (typeof initialLikeCount === 'number') {
+        if (!cancelled) setLikeCount(initialLikeCount)
+      } else {
+        const countRes = await getPostLikeCount(supabase, postId)
+        if (cancelled) return
+        if (countRes.error) {
+          setLikeCount(0)
+        } else {
+          setLikeCount(countRes.count)
+        }
+      }
+
+      if (!user?.id) {
+        if (!cancelled) setIsLiked(false)
+        return
+      }
+
+      const likedRes = await getPostLikedByMe(supabase, postId)
       if (cancelled) return
-      setLikeCount(count)
-      setIsLiked(liked)
+      if (likedRes.error) {
+        setIsLiked(false)
+      } else {
+        setIsLiked(likedRes.liked)
+      }
     })()
     return () => {
       cancelled = true
     }
-  }, [postId, user?.id])
+  }, [postId, user?.id, initialLikeCount])
+
+  const triggerHeartPulse = useCallback(() => {
+    if (heartPulseTimer.current) clearTimeout(heartPulseTimer.current)
+    setHeartPulse(true)
+    heartPulseTimer.current = setTimeout(() => {
+      setHeartPulse(false)
+      heartPulseTimer.current = null
+    }, 320)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (heartPulseTimer.current) clearTimeout(heartPulseTimer.current)
+    }
+  }, [])
 
   const handleLike = async () => {
-    if (!user) {
+    if (isGuest) {
+      triggerHeartPulse()
       toast({
-        title: "Inicia sesión",
-        description: "Necesitas iniciar sesión para dar like",
-        variant: "destructive"
+        title: 'Inicia sesión',
+        description: 'Inicia sesión para apoyar a este músico.',
       })
       return
     }
+
+    if (likeSubmitting) return
 
     const prevLiked = isLiked
     const prevCount = likeCount
     const nextLiked = !prevLiked
     const nextCount = Math.max(0, prevCount + (nextLiked ? 1 : -1))
 
+    triggerHeartPulse()
     setIsLiked(nextLiked)
     setLikeCount(nextCount)
+    setLikeSubmitting(true)
 
     const supabase = createClient()
     const { liked, error } = await togglePostLike(supabase, postId)
+    setLikeSubmitting(false)
+
     if (error) {
       setIsLiked(prevLiked)
       setLikeCount(prevCount)
@@ -102,9 +153,11 @@ export default function PostActions({
       return
     }
 
-    const { count } = await getPostLikeCount(supabase, postId)
     setIsLiked(liked)
-    setLikeCount(count)
+    const { count, error: countErr } = await getPostLikeCount(supabase, postId)
+    if (!countErr) {
+      setLikeCount(count)
+    }
   }
 
   const handleComment = () => {
@@ -248,16 +301,47 @@ export default function PostActions({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-4">
         <button
-          onClick={handleLike}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:opacity-90 ${
-            isLiked ? 'text-white' : 'text-white'
-          }`}
-          style={{ backgroundColor: 'var(--rolex)', border: '2px solid var(--rolex)' }}
+          type="button"
+          onClick={() => void handleLike()}
+          disabled={likeSubmitting}
+          aria-pressed={!isGuest && isLiked}
+          aria-label={
+            isGuest
+              ? 'Inicia sesión para apoyar a este músico'
+              : isLiked
+                ? 'Quitar me gusta'
+                : 'Me gusta'
+          }
+          className={cn(
+            'group inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 transition-all duration-200',
+            'active:scale-95 disabled:opacity-60 disabled:active:scale-100',
+            isGuest
+              ? 'text-neutral-400/90 hover:bg-neutral-50/80 hover:text-neutral-600'
+              : 'text-neutral-500 hover:bg-neutral-100/90 hover:text-neutral-900',
+            !isGuest && isLiked && 'hover:bg-rose-50'
+          )}
         >
-          <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-          <span className="font-semibold">{likeCount}</span>
+          <Heart
+            className={cn(
+              'h-[1.125rem] w-[1.125rem] shrink-0 transition-transform duration-200 ease-out',
+              heartPulse && 'scale-[1.28]',
+              isGuest && 'opacity-90',
+              !isGuest && isLiked ? 'text-rose-500' : 'text-neutral-400 group-hover:text-neutral-600'
+            )}
+            fill={!isGuest && isLiked ? 'currentColor' : 'none'}
+            strokeWidth={isGuest ? 1.85 : 1.65}
+          />
+          <span
+            className={cn(
+              'min-w-[1ch] text-[13px] font-medium tabular-nums tracking-tight',
+              isGuest ? 'text-neutral-500/90' : 'text-neutral-600',
+              !isGuest && isLiked && 'text-rose-600/90'
+            )}
+          >
+            {likeCount}
+          </span>
         </button>
         <button
           onClick={handleComment}

@@ -108,7 +108,7 @@ export default function ComunidadChatPage() {
           user_id,
           content,
           created_at,
-          profiles (
+          profiles!community_messages_user_id_fkey (
             full_name,
             username,
             avatar_url
@@ -184,7 +184,7 @@ export default function ComunidadChatPage() {
         user_id,
         content,
         created_at,
-        profiles (
+        profiles!community_messages_user_id_fkey (
           full_name,
           username,
           avatar_url

@@ -18,6 +18,7 @@ export async function getFeedAction(limit?: number) {
 export async function createPostAction(input: {
   video_url: string
   description?: string | null
+  thumbnail_url?: string | null
 }) {
   const supabase = await createClient()
   return createPost(supabase, input)

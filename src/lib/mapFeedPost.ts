@@ -1,4 +1,5 @@
 import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
+import { parsePostLikeCountFromRow } from '@/src/lib/feed/postLikeCount'
 import type { FeedPostRow } from '@/src/lib/services/jam-social'
 
 export function mapFeedPostRowToDisplayPost(
@@ -24,6 +25,8 @@ export function mapFeedPostRowToDisplayPost(
     tipo: 'video',
     feedType,
     video_url: row.video_url,
+    thumbnail_url: row.thumbnail_url ?? undefined,
     estado: 'Todos',
+    likeCount: parsePostLikeCountFromRow(row),
   }
 }

@@ -115,18 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await syncFromSupabase(supabaseUser)
         return
       }
-      const savedUser = localStorage.getItem('user')
-      const savedAuth = localStorage.getItem('isAuthenticated')
-      if (savedUser && savedAuth === 'true') {
-        try {
-          setUser(JSON.parse(savedUser))
-          setIsAuthenticated(true)
-        } catch (error) {
-          console.error('Error al cargar sesión:', error)
-          localStorage.removeItem('user')
-          localStorage.removeItem('isAuthenticated')
-        }
-      }
+      // Sin JWT en cookies: no restaurar desde localStorage. En producción eso dejaba la UI
+      // "logueada" mientras las queries iban como `anon` → feed vacío, DMs vacíos, perfil raro.
+      localStorage.removeItem('user')
+      localStorage.removeItem('isAuthenticated')
+      setUser(null)
+      setIsAuthenticated(false)
     }
 
     initAuth()

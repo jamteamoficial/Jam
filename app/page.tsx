@@ -147,45 +147,66 @@ export default function Home() {
   }, [])
 
   const loadCurrentFeed = async () => {
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    if (activeFeed === 'general' && selectedCommunity?.id && user?.id) {
-      const { data: memberIds, error: membersError } = await listCommunityMemberIds(
-        supabase,
-        selectedCommunity.id
-      )
-      if (membersError) {
-        console.error('[Home] Error cargando miembros de comunidad', membersError)
-        setCurrentPosts([])
+      if (activeFeed === 'general' && selectedCommunity?.id && user?.id) {
+        const { data: memberIds, error: membersError } = await listCommunityMemberIds(
+          supabase,
+          selectedCommunity.id
+        )
+        if (membersError) {
+          console.error('[Home] Error cargando miembros de comunidad', membersError)
+          toast({
+            title: 'No se pudo cargar la comunidad',
+            description: membersError.message,
+          })
+          setCurrentPosts([])
+          return
+        }
+        const { data, error } = await getFeedByUserIds(supabase, {
+          userIds: memberIds ?? [],
+          limit: 50,
+        })
+        if (error) {
+          console.error('[Home] Error cargando feed por comunidad', error)
+          toast({
+            title: 'No se pudo cargar el feed',
+            description: error.message,
+          })
+          setCurrentPosts([])
+          return
+        }
+        const mapped = ((data ?? []) as Array<
+          FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })
+        >).map((row) => mapFeedPostRowToDisplayPost(row, 'general'))
+        setCurrentPosts(mapped)
         return
       }
-      const { data, error } = await getFeedByUserIds(supabase, {
-        userIds: memberIds ?? [],
-        limit: 50,
-      })
+
+      const { data, error } = await getFeed(supabase, { limit: 50 })
       if (error) {
-        console.error('[Home] Error cargando feed por comunidad', error)
+        console.error('[Home] Error cargando posts', error)
+        toast({
+          title: 'No se pudo cargar el feed',
+          description: error.message,
+        })
         setCurrentPosts([])
         return
       }
+
       const mapped = ((data ?? []) as Array<
         FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })
-      >).map((row) => mapFeedPostRowToDisplayPost(row, 'general'))
+      >).map((row) => mapFeedPostRowToDisplayPost(row, activeFeed))
       setCurrentPosts(mapped)
-      return
-    }
-
-    const { data, error } = await getFeed(supabase, { limit: 50 })
-    if (error) {
-      console.error('[Home] Error cargando posts', error)
+    } catch (e) {
+      console.error('[Home] loadCurrentFeed', e)
+      toast({
+        title: 'Error al cargar publicaciones',
+        description: e instanceof Error ? e.message : 'Intenta de nuevo en un momento.',
+      })
       setCurrentPosts([])
-      return
     }
-
-    const mapped = ((data ?? []) as Array<FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })>).map(
-      (row) => mapFeedPostRowToDisplayPost(row, activeFeed)
-    )
-    setCurrentPosts(mapped)
   }
 
   useEffect(() => {
@@ -203,11 +224,10 @@ export default function Home() {
   }, [activeFeed, selectedCommunity?.id, user?.id])
 
   const handleJam = (postId: string, usuario: string) => {
-    if (!user) {
+    if (!user?.id) {
       toast({
-        title: "Inicia sesión",
-        description: "Necesitas iniciar sesión para enviar un JAM",
-        variant: "destructive"
+        title: 'Inicia sesión',
+        description: 'Inicia sesión para enviar un JAM a este músico.',
       })
       return
     }
