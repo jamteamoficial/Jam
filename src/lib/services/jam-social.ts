@@ -97,7 +97,7 @@ export async function createPost(
       description: input.description ?? null,
       thumbnail_url: input.thumbnail_url ?? null,
     })
-    .select()
+    .select(POSTS_FEED_SELECT)
     .single()
 }
 

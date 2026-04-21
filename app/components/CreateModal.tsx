@@ -18,6 +18,7 @@ interface CreateModalProps {
 
 const MAX_FILE_SIZE = 30 * 1024 * 1024
 const MAX_IMAGE_SIZE = 12 * 1024 * 1024
+const UPLOAD_TIMEOUT_MS = 60_000
 
 export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
   const { toast } = useToast()
@@ -36,6 +37,20 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
   const [videoCoverFile, setVideoCoverFile] = useState<File | null>(null)
   const [videoCoverPreview, setVideoCoverPreview] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const withTimeout = async <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`${label} tardó demasiado. Intenta nuevamente.`))
+      }, ms)
+    })
+    try {
+      return await Promise.race([promise, timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }
 
   const clearVideoMedia = () => {
     if (videoPreview) URL.revokeObjectURL(videoPreview)
@@ -201,14 +216,12 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
     }
 
     setLoading(true)
-
     try {
       const supabase = createClient()
       const {
         data: { user: authUser },
       } = await supabase.auth.getUser()
       if (!authUser?.id) {
-        setLoading(false)
         toast({
           title: 'Sesion requerida',
           description: 'Debes iniciar sesion para publicar.',
@@ -224,7 +237,6 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
         .maybeSingle()
 
       if (isProfileIncomplete(profile)) {
-        setLoading(false)
         toast({
           title: 'Completa tu perfil',
           description: 'Antes de publicar debes completar el onboarding.',
@@ -241,21 +253,37 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
 
       if (contentType === 'mensaje' && textImageFile) {
         toast({ title: 'Subiendo imagen…', description: 'Un momento' })
-        thumbnailUrl = await uploadPostImage(textImageFile, userId)
+        thumbnailUrl = await withTimeout(
+          uploadPostImage(textImageFile, userId),
+          UPLOAD_TIMEOUT_MS,
+          'La subida de imagen'
+        )
         finalVideoUrl = ''
       }
 
       if (contentType === 'video' && selectedVideo) {
         toast({ title: 'Subiendo video…', description: 'Por favor espera' })
-        finalVideoUrl = await uploadVideo(selectedVideo, userId)
+        finalVideoUrl = await withTimeout(
+          uploadVideo(selectedVideo, userId),
+          UPLOAD_TIMEOUT_MS,
+          'La subida de video'
+        )
         toast({ title: 'Video subido', description: 'Procesando portada…' })
 
         if (videoCoverFile) {
-          thumbnailUrl = await uploadPostImage(videoCoverFile, userId)
+          thumbnailUrl = await withTimeout(
+            uploadPostImage(videoCoverFile, userId),
+            UPLOAD_TIMEOUT_MS,
+            'La subida de portada'
+          )
         } else {
           try {
             const frameBlob = await captureVideoPosterFrame(selectedVideo)
-            thumbnailUrl = await uploadPostImageBlob(frameBlob, userId)
+            thumbnailUrl = await withTimeout(
+              uploadPostImageBlob(frameBlob, userId),
+              UPLOAD_TIMEOUT_MS,
+              'La subida de miniatura'
+            )
           } catch (capErr) {
             console.warn('[CreateModal] Sin portada automática:', capErr)
             thumbnailUrl = null
@@ -264,11 +292,15 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
       }
 
       const description = text.trim() || null
-      const { error } = await createPost(supabase, {
-        video_url: finalVideoUrl,
-        description,
-        thumbnail_url: thumbnailUrl,
-      })
+      const { error } = await withTimeout(
+        createPost(supabase, {
+          video_url: finalVideoUrl,
+          description,
+          thumbnail_url: thumbnailUrl,
+        }),
+        UPLOAD_TIMEOUT_MS,
+        'La publicación'
+      )
 
       if (error) throw error
 
@@ -285,16 +317,16 @@ export default function CreateModal({ isOpen, onClose }: CreateModalProps) {
       handleRemoveTextImage()
       handleRemoveVideoCover()
       if (fileInputRef.current) fileInputRef.current.value = ''
-      setLoading(false)
       onClose()
       window.dispatchEvent(new CustomEvent('newPostCreated'))
     } catch (error: unknown) {
-      console.error('Error al guardar publicación:', error)
+      console.error('Error al publicar:', error)
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'No se pudo publicar',
         variant: 'destructive',
       })
+    } finally {
       setLoading(false)
     }
   }
