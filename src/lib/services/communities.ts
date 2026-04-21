@@ -1,5 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
+import { resolveCommunityColorToken } from '@/src/lib/communities/colors'
+
 export type CommunityRow = {
   id: string
   name: string
@@ -22,9 +24,11 @@ export async function createCommunity(
     name: string
     description: string
     icon: string
-    color: string
+    /** Si falta o no es un token válido, se usa Marca (naranja) → `purple`. */
+    color?: string | null
   }
 ) {
+  const color = resolveCommunityColorToken(input.color)
   return supabase
     .from('communities')
     .insert({
@@ -32,9 +36,9 @@ export async function createCommunity(
       name: input.name,
       description: input.description,
       icon: input.icon,
-      color: input.color,
+      color,
     })
-    .select('id, name')
+    .select('id, name, description, icon, color')
     .single()
 }
 

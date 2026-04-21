@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/app/context/AuthContext'
 import { createClient } from '@/src/lib/supabase/client'
 import { joinCommunity, listCommunityMemberIds } from '@/src/lib/services/communities'
+import { getCommunityIconGradientClass } from '@/src/lib/communities/colors'
 
 type CommunityRow = {
   id: string
@@ -30,21 +31,7 @@ export default function ComunidadDetallePage() {
   const [memberCount, setMemberCount] = useState(0)
   const [isMember, setIsMember] = useState(false)
 
-  const colorClass = useMemo(() => {
-    const c = community?.color || 'purple'
-    const map: Record<string, string> = {
-      purple: 'from-violet-600 to-purple-900',
-      blue: 'from-sky-600 to-blue-900',
-      red: 'from-red-600 to-rose-900',
-      green: 'from-emerald-600 to-green-900',
-      yellow: 'from-amber-500 to-yellow-700',
-      orange: 'from-orange-500 to-red-800',
-      indigo: 'from-indigo-500 to-slate-900',
-      pink: 'from-pink-500 to-fuchsia-900',
-      teal: 'from-teal-500 to-cyan-900',
-    }
-    return map[c] || map.purple
-  }, [community?.color])
+  const colorClass = useMemo(() => getCommunityIconGradientClass(community?.color), [community?.color])
 
   useEffect(() => {
     let cancelled = false

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/src/lib/supabase/client'
+import { getAuthCallbackUrl } from '@/src/lib/siteOrigin'
 
 interface GoogleLoginProps {
   /** Texto del botón (por defecto: Google) */
@@ -22,7 +23,7 @@ export default function GoogleLogin({ label, variant = 'default', className = ''
     setLoginError(null)
     setLoading(true)
     try {
-      const redirectTo = `${window.location.origin}/auth/callback`
+      const redirectTo = getAuthCallbackUrl()
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

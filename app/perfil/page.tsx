@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Save, X, User } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/src/lib/supabase/client'
+import JamLoadingPlaceholder from '@/app/components/JamLoadingPlaceholder'
 
 interface ProfileData {
   nombreCompleto: string
@@ -47,6 +48,7 @@ function PerfilContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isOnboarding = searchParams.get('onboarding') === '1'
+  const [mounted, setMounted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [isQuickEditOpen, setIsQuickEditOpen] = useState(false)
   const [quickLoading, setQuickLoading] = useState(false)
@@ -70,10 +72,14 @@ function PerfilContent() {
     contactoInstagram: ''
   })
 
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Cargar perfil guardado
   useEffect(() => {
     if (typeof window !== 'undefined' && user) {
-      const savedProfile = localStorage.getItem(`profile_${user.id || user.email}`)
+      const savedProfile = localStorage.getItem(`profile_${user?.id ?? user?.email ?? ''}`)
       if (savedProfile) {
         try {
           const parsed = JSON.parse(savedProfile)
@@ -282,6 +288,14 @@ function PerfilContent() {
       description: 'Tus cambios se guardaron en Supabase.',
     })
     setIsQuickEditOpen(false)
+  }
+
+  if (!mounted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-4">
+        <JamLoadingPlaceholder className="min-h-[50vh]" />
+      </div>
+    )
   }
 
   if (!isAuthenticated) {
@@ -641,7 +655,7 @@ export default function PerfilPage() {
     <Suspense
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 text-gray-600">
-          Cargando perfil…
+          <JamLoadingPlaceholder />
         </div>
       }
     >

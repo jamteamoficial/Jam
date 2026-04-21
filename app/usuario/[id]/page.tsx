@@ -29,6 +29,7 @@ import { mapFeedPostRowToDisplayPost } from '@/src/lib/mapFeedPost'
 import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
 import { countFollowers, countFollowing, POSTS_FEED_SELECT, toggleFollow } from '@/src/lib/services/jam-social'
 import { createNotification } from '@/src/lib/services/notifications'
+import JamLoadingPlaceholder from '@/app/components/JamLoadingPlaceholder'
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
@@ -90,6 +91,7 @@ export default function UsuarioProfilePage() {
   const rawId = String(params.id ?? '')
   const uuid = useMemo(() => isUuid(rawId), [rawId])
 
+  const [mounted, setMounted] = useState(false)
   const [profileLoading, setProfileLoading] = useState(true)
   const [postsLoading, setPostsLoading] = useState(true)
 
@@ -104,6 +106,10 @@ export default function UsuarioProfilePage() {
   const [editForm, setEditForm] = useState({ fullName: '', username: '', bio: '', instrumentos: '' })
 
   const isOwnProfile = Boolean(user?.id && profile && user.id === profile.id)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -246,7 +252,7 @@ export default function UsuarioProfilePage() {
     setProfile((prev) => (prev ? { ...prev, seguidores: followers } : prev))
 
     if (nowFollowing) {
-      const actorName = getDisplayName(user.nombreCompleto, user.username)
+      const actorName = getDisplayName(user?.nombreCompleto, user?.username ?? 'usuario')
       const { error: notifyErr } = await createNotification(supabase, {
         userId: profile.id,
         actorId: authUser.id,
@@ -399,10 +405,10 @@ export default function UsuarioProfilePage() {
     })
   }
 
-  if (profileLoading) {
+  if (!mounted || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-        <p className="text-gray-600">Cargando perfil…</p>
+        <JamLoadingPlaceholder />
       </div>
     )
   }
@@ -619,7 +625,9 @@ export default function UsuarioProfilePage() {
             </p>
 
             {postsLoading ? (
-              <div className="rounded-2xl border border-rolex/15 bg-white/70 p-10 text-center text-sm text-gray-600">Cargando publicaciones…</div>
+              <div className="rounded-2xl border border-rolex/15 bg-white/70 p-6">
+                <JamLoadingPlaceholder className="min-h-[12rem] py-8" />
+              </div>
             ) : posts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-rolex/25 bg-white/70 p-12 text-center">
                 <p className="text-sm text-gray-600">Aún no hay publicaciones</p>

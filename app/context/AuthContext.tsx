@@ -189,11 +189,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .map((s) => s.trim())
       .filter(Boolean)
 
+    const displayUsername = user.username ?? ''
+
     const { error } = await supabase
       .from('profiles')
       .update({
         full_name: profileData.nombreCompleto || null,
-        username: user.username,
+        username: displayUsername,
         ciudad: profileData.ciudad || null,
         bio: profileData.descripcion || null,
         instrumentos,

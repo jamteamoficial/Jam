@@ -23,10 +23,15 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   const { logout: authContextLogout } = useAuth()
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const [headerQuery, setHeaderQuery] = useState('')
   const headerSearchRef = useRef<HTMLInputElement>(null)
 
   const supabase = useMemo(() => createClient(), [])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const init = async () => {
@@ -34,7 +39,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
       setSupabaseUser(user ?? null)
       setLoading(false)
     }
-    init()
+    void init()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
@@ -57,9 +62,10 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   }
 
   useEffect(() => {
+    if (!mounted) return
     const q = searchParams.get('q') ?? ''
     setHeaderQuery(q)
-  }, [searchParams])
+  }, [searchParams, mounted])
 
   const applyGlobalSearch = (rawValue: string) => {
     const value = rawValue.trim()
@@ -75,13 +81,14 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   }
 
   useEffect(() => {
+    if (!mounted) return
     const t = window.setTimeout(() => {
       // Si no estamos en home y no hay término, evitamos navegación innecesaria.
       if (pathname !== '/' && headerQuery.trim().length === 0) return
       applyGlobalSearch(headerQuery)
     }, 380)
     return () => window.clearTimeout(t)
-  }, [headerQuery, pathname, searchParams])
+  }, [headerQuery, pathname, searchParams, mounted])
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b-2 border-rolex/30 shadow-md">
@@ -141,8 +148,11 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
           </div>
 
           {/* Navegación derecha */}
-          <div className="flex items-center gap-3">
-            {!loading && (
+          <div className="flex min-h-[40px] items-center justify-end gap-3">
+            {(!mounted || loading) && (
+              <span className="text-xs font-medium text-gray-500 sm:text-sm">Cargando JAM…</span>
+            )}
+            {mounted && !loading && (
               <>
                 {isAuthenticated ? (
                   <>

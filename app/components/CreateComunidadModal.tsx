@@ -1,39 +1,33 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { X, Users, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import { useAuth } from '@/app/context/AuthContext'
 import { createClient } from '@/src/lib/supabase/client'
 import { createCommunity, joinCommunity } from '@/src/lib/services/communities'
+import {
+  COMMUNITY_COLOR_OPTIONS,
+  DEFAULT_COMMUNITY_COLOR_TOKEN,
+} from '@/src/lib/communities/colors'
 
 interface CreateComunidadModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
-const COLOR_OPTIONS = [
-  { value: 'purple', label: 'Marca (naranja)', gradient: 'from-rolex to-rolex-light' },
-  { value: 'blue', label: 'Azul', gradient: 'from-blue-600 to-blue-700' },
-  { value: 'red', label: 'Rojo', gradient: 'from-red-500 to-red-700' },
-  { value: 'green', label: 'Verde', gradient: 'from-green-500 to-green-600' },
-  { value: 'yellow', label: 'Amarillo', gradient: 'from-yellow-400 to-yellow-500' },
-  { value: 'orange', label: 'Naranja', gradient: 'from-orange-500 to-orange-600' },
-  { value: 'indigo', label: 'Índigo', gradient: 'from-rolex to-rolex-light' },
-  { value: 'pink', label: 'Rosa', gradient: 'from-rolex to-rolex-light' },
-  { value: 'teal', label: 'Verde azulado', gradient: 'from-teal-500 to-teal-600' }
-]
-
 const EMOJI_OPTIONS = ['🎤', '🎸', '🥁', '🎹', '🎺', '🎻', '🎧', '🎵', '🎶', '🎼', '🎷', '🎪', '🎭', '🎨', '🚀', '⭐', '🔥', '💫', '🎯', '🌟']
 
 export default function CreateComunidadModal({ isOpen, onClose }: CreateComunidadModalProps) {
+  const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
   const [nombre, setNombre] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [icono, setIcono] = useState('🎵')
-  const [color, setColor] = useState('purple')
+  const [color, setColor] = useState(DEFAULT_COMMUNITY_COLOR_TOKEN)
   const [loading, setLoading] = useState(false)
 
   const slugifyCommunityId = (value: string) =>
@@ -95,7 +89,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
         name: nombre.trim(),
         description: descripcion.trim(),
         icon: icono,
-        color,
+        color: color || DEFAULT_COMMUNITY_COLOR_TOKEN,
       })
 
       if (error) {
@@ -130,12 +124,11 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
       setNombre('')
       setDescripcion('')
       setIcono('🎵')
-      setColor('purple')
+      setColor(DEFAULT_COMMUNITY_COLOR_TOKEN)
       setLoading(false)
       onClose()
-
-      // Disparar evento para actualizar listados
       window.dispatchEvent(new CustomEvent('comunidadCreated'))
+      router.push(`/comunidad/${comunidadId}`)
     } catch (error) {
       console.error('Error al crear comunidad:', error)
       toast({
@@ -151,13 +144,14 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
     setNombre('')
     setDescripcion('')
     setIcono('🎵')
-    setColor('purple')
+    setColor(DEFAULT_COMMUNITY_COLOR_TOKEN)
     onClose()
   }
 
   if (!isOpen) return null
 
-  const selectedColorGradient = COLOR_OPTIONS.find(c => c.value === color)?.gradient || 'from-rolex to-rolex-light'
+  const selectedColorGradient =
+    COMMUNITY_COLOR_OPTIONS.find((c) => c.value === color)?.gradient || 'from-rolex to-rolex-light'
 
   return (
     <>
@@ -245,7 +239,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
                   Color
                 </label>
                 <div className="grid grid-cols-3 gap-2">
-                  {COLOR_OPTIONS.map((colorOption) => (
+                  {COMMUNITY_COLOR_OPTIONS.map((colorOption) => (
                     <button
                       key={colorOption.value}
                       type="button"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useAuth } from './context/AuthContext'
 import { useToast } from '@/src/lib/hooks/use-toast'
 import { Music, Video, MessageCircle, Users, Inbox } from 'lucide-react'
@@ -22,6 +22,7 @@ import {
   type FeedPostRow,
 } from '@/src/lib/services/jam-social'
 import { listCommunityMemberIds } from '@/src/lib/services/communities'
+import JamLoadingPlaceholder from '@/app/components/JamLoadingPlaceholder'
 
 type AppFeedPost = FeedDisplayPost & {
   user_id?: string
@@ -31,6 +32,8 @@ type AppFeedPost = FeedDisplayPost & {
 export default function Home() {
   const { user, isAuthenticated } = useAuth()
   const { toast } = useToast()
+  const [mounted, setMounted] = useState(false)
+  const [feedLoading, setFeedLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'chats' | 'feed' | 'comunidad'>('feed')
   const [activeFeed, setActiveFeed] = useState<'general' | 'descubrir' | 'conectar' | 'aprender'>('general')
   const [currentPosts, setCurrentPosts] = useState<AppFeedPost[]>([])
@@ -43,6 +46,10 @@ export default function Home() {
   const [desktopSideView, setDesktopSideView] = useState<'feed' | 'mensajes' | 'comunidades' | 'jams'>('feed')
   const [selectedCommunity, setSelectedCommunity] = useState<{ id: string; nombre: string } | null>(null)
   const [matchedProfiles, setMatchedProfiles] = useState<ProfileSearchRow[]>([])
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -146,7 +153,8 @@ export default function Home() {
     }
   }, [])
 
-  const loadCurrentFeed = async () => {
+  const loadCurrentFeed = useCallback(async () => {
+    setFeedLoading(true)
     try {
       const supabase = createClient()
 
@@ -206,14 +214,19 @@ export default function Home() {
         description: e instanceof Error ? e.message : 'Intenta de nuevo en un momento.',
       })
       setCurrentPosts([])
+    } finally {
+      setFeedLoading(false)
     }
-  }
-
-  useEffect(() => {
-    void loadCurrentFeed()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `toast` es estable; incluirlo recrea el callback cada render.
   }, [activeFeed, selectedCommunity?.id, user?.id])
 
   useEffect(() => {
+    if (!mounted) return
+    void loadCurrentFeed()
+  }, [mounted, loadCurrentFeed])
+
+  useEffect(() => {
+    if (!mounted) return
     const handleNewPost = () => {
       void loadCurrentFeed()
     }
@@ -221,7 +234,7 @@ export default function Home() {
     return () => {
       window.removeEventListener('newPostCreated', handleNewPost)
     }
-  }, [activeFeed, selectedCommunity?.id, user?.id])
+  }, [mounted, loadCurrentFeed])
 
   const handleJam = (postId: string, usuario: string) => {
     if (!user?.id) {
@@ -320,6 +333,16 @@ export default function Home() {
     }
   }, [searchQuery])
 
+  if (!mounted) {
+    return (
+      <div
+        id="feed-main"
+        className="relative min-h-[calc(100vh-5rem)] w-full bg-gradient-to-br from-slate-50 via-zinc-100 to-gray-100"
+      >
+        <JamLoadingPlaceholder className="min-h-[calc(100vh-6rem)]" />
+      </div>
+    )
+  }
 
   return (
     <>
@@ -487,7 +510,9 @@ export default function Home() {
                     </button>
                   </div>
                 )}
-                {filteredPosts.length === 0 ? (
+                {feedLoading ? (
+                  <JamLoadingPlaceholder className="min-h-[24rem]" />
+                ) : filteredPosts.length === 0 ? (
                   <div className="flex h-96 flex-col items-center justify-center text-center">
                     <Music className="mb-4 h-20 w-20 text-rolex/50" />
                     <h2 className="mb-2 text-2xl font-bold text-gray-900">
@@ -605,7 +630,9 @@ export default function Home() {
                   </div>
                 </div>
               )}
-              {filteredPosts.length === 0 ? (
+              {feedLoading ? (
+                <JamLoadingPlaceholder className="min-h-[20rem]" />
+              ) : filteredPosts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Music className="mb-4 h-16 w-16 text-rolex/50" />
                   <p className="text-gray-600">

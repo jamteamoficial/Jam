@@ -37,22 +37,13 @@ export type PostCommentRow = {
 
 /**
  * Feed: posts + autor + conteo de likes en una sola petición.
- * `profiles!posts_user_id_fkey` = perfil del autor (`posts.user_id` → `profiles.id`).
- * `post_likes(count)` agrega likes por `post_id` (un solo FK típico post_likes → posts).
- * Nombre `posts_user_id_fkey`: constraint por defecto de PostgreSQL en `posts(user_id)`; renómbralo en BD si difiere.
+ * Relaciones explícitas para evitar PGRST201 (varias FK entre `posts` y `profiles` / `post_likes`).
+ * Si renombraste constraints en Postgres, ajusta los nombres tras el `!`.
  */
 export const POSTS_FEED_SELECT = `
   *,
-  profiles!posts_user_id_fkey (
-    id,
-    username,
-    full_name,
-    ciudad,
-    avatar_url,
-    bio,
-    instrumentos
-  ),
-  post_likes(count)
+  profiles!posts_user_id_fkey(*),
+  post_likes!post_likes_post_id_fkey(count)
 `
 
 export async function getFeed(

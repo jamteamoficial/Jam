@@ -12,21 +12,10 @@ import {
   type CommunityRow,
 } from '@/src/lib/services/communities'
 import { useAuth } from '@/app/context/AuthContext'
-
-const getColorClasses = (color: string) => {
-  const colors: Record<string, string> = {
-    purple: 'from-rolex to-rolex-light',
-    blue: 'from-rolex to-rolex-light',
-    red: 'from-red-500 to-red-700',
-    green: 'from-green-500 to-green-600',
-    yellow: 'from-yellow-400 to-yellow-500',
-    orange: 'from-orange-500 to-orange-600',
-    indigo: 'from-indigo-600 to-indigo-700',
-    pink: 'from-rolex to-rolex-light',
-    teal: 'from-teal-500 to-teal-600'
-  }
-  return colors[color] || 'from-rolex to-rolex-light'
-}
+import {
+  DEFAULT_COMMUNITY_COLOR_TOKEN,
+  getCommunityIconGradientClass,
+} from '@/src/lib/communities/colors'
 
 export default function ComunidadesPage() {
   const { user } = useAuth()
@@ -49,7 +38,7 @@ export default function ComunidadesPage() {
           nombre: c.name,
           icono: c.icon || '🎵',
           descripcion: c.description || 'Comunidad musical',
-          color: c.color || 'purple',
+          color: c.color || DEFAULT_COMMUNITY_COLOR_TOKEN,
           miembros: String(countMap?.[c.id] ?? 0),
         }))
       )
@@ -95,7 +84,7 @@ export default function ComunidadesPage() {
               className="border-2 border-rolex/30 hover:border-rolex transition-all duration-300 hover:shadow-xl cursor-pointer group rounded-xl bg-white p-6"
             >
               <div className="flex items-start gap-4">
-                <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${getColorClasses(comunidad.color)} flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform`}>
+                <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${getCommunityIconGradientClass(comunidad.color)} flex items-center justify-center text-4xl shadow-lg group-hover:scale-110 transition-transform`}>
                   {comunidad.icono}
                 </div>
                 <div className="flex-1">

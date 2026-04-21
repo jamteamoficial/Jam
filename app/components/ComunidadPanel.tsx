@@ -13,6 +13,10 @@ import {
   type CommunityRow,
 } from '@/src/lib/services/communities'
 import { useAuth } from '@/app/context/AuthContext'
+import {
+  DEFAULT_COMMUNITY_COLOR_TOKEN,
+  getCommunityIconGradientClass,
+} from '@/src/lib/communities/colors'
 
 interface Comunidad {
   id: string
@@ -21,21 +25,6 @@ interface Comunidad {
   descripcion: string
   color: string
   miembros: string
-}
-
-const getIconGradient = (color: string) => {
-  const map: Record<string, string> = {
-    purple: 'from-violet-600 to-purple-900',
-    blue: 'from-sky-600 to-blue-900',
-    red: 'from-red-600 to-rose-900',
-    green: 'from-emerald-600 to-green-900',
-    yellow: 'from-amber-500 to-yellow-700',
-    orange: 'from-orange-500 to-red-800',
-    indigo: 'from-indigo-500 to-slate-900',
-    pink: 'from-pink-500 to-fuchsia-900',
-    teal: 'from-teal-500 to-cyan-900',
-  }
-  return map[color] || 'from-emerald-600 to-green-900'
 }
 
 interface ComunidadPanelProps {
@@ -49,7 +38,7 @@ function mapRowToCommunity(row: CommunityRow, membersCount?: number): Comunidad 
     nombre: row.name,
     icono: row.icon || '🎵',
     descripcion: row.description || 'Comunidad musical',
-    color: row.color || 'purple',
+    color: row.color || DEFAULT_COMMUNITY_COLOR_TOKEN,
     miembros: String(membersCount ?? 0),
   }
 }
@@ -144,7 +133,7 @@ export default function ComunidadPanel({ onSelectCommunity, selectedCommunityId 
                 >
                   <div className="mb-3 flex items-start gap-3">
                     <div
-                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-2xl shadow-lg ${getIconGradient(comunidad.color)}`}
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-2xl shadow-lg ${getCommunityIconGradientClass(comunidad.color)}`}
                     >
                       {comunidad.icono}
                     </div>
