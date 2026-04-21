@@ -23,19 +23,20 @@ export async function createCommunity(
     id: string
     name: string
     description: string
-    icon: string
+    icon?: string | null
     /** Si falta o no es un token válido, se usa Marca (naranja) → `purple`. */
     color?: string | null
   }
 ) {
   const color = resolveCommunityColorToken(input.color)
+  const icon = input.icon?.trim() ? input.icon.trim() : null
   return supabase
     .from('communities')
     .insert({
       id: input.id,
       name: input.name,
       description: input.description,
-      icon: input.icon,
+      icon,
       color,
     })
     .select('id, name, description, icon, color')

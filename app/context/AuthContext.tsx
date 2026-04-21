@@ -6,6 +6,8 @@ import type { User as SupabaseAuthUser } from '@supabase/supabase-js'
 import { createClient } from '@/src/lib/supabase/client'
 import { ensurePublicProfileFromAuth } from '@/src/lib/supabase/ensurePublicProfile'
 
+const AUTH_REQUEST_TIMEOUT_MS = 8_000
+
 export interface ProfileData {
   nombreCompleto: string
   comuna: string
@@ -50,6 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
+  const withTimeout = async <T,>(promise: Promise<T>, label: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`${label} tardó más de 8 segundos.`))
+      }, AUTH_REQUEST_TIMEOUT_MS)
+    })
+    try {
+      return await Promise.race([promise, timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }
+
   const syncFromSupabase = async (supabaseUser: SupabaseAuthUser) => {
     const supabase = createClient()
 
@@ -57,11 +73,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       /* tabla profiles o RLS: se ignora para no bloquear la UI */
     })
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('username, full_name, ciudad, bio, instrumentos')
-      .eq('id', supabaseUser.id)
-      .maybeSingle()
+    const { data: profile } = await withTimeout(
+      supabase
+        .from('profiles')
+        .select('username, full_name, ciudad, bio, instrumentos')
+        .eq('id', supabaseUser.id)
+        .maybeSingle(),
+      'La carga del perfil'
+    )
 
     const userData: User = {
       id: supabaseUser.id,
@@ -110,11 +129,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const supabase = createClient()
 
     const initAuth = async () => {
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-      if (supabaseUser) {
-        await syncFromSupabase(supabaseUser)
-        return
+      try {
+        const { data: { user: supabaseUser } } = await withTimeout(
+          supabase.auth.getUser(),
+          'La validación de sesión'
+        )
+        if (supabaseUser) {
+          await syncFromSupabase(supabaseUser)
+          return
+        }
+      } catch (error) {
+        console.error('[Auth] initAuth error', error)
       }
+
       // Sin JWT en cookies: no restaurar desde localStorage. En producción eso dejaba la UI
       // "logueada" mientras las queries iban como `anon` → feed vacío, DMs vacíos, perfil raro.
       localStorage.removeItem('user')
@@ -128,7 +155,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user) {
-          await syncFromSupabase(session.user)
+          await syncFromSupabase(session.user).catch((error) => {
+            console.error('[Auth] onAuthStateChange sync error', error)
+          })
         } else if (event === 'SIGNED_OUT') {
           localStorage.removeItem('user')
           localStorage.removeItem('isAuthenticated')

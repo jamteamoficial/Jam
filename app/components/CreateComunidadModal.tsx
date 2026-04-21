@@ -79,7 +79,6 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
           description: "Usa un nombre con letras o números.",
           variant: "destructive"
         })
-        setLoading(false)
         return
       }
 
@@ -88,7 +87,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
         id: comunidadId,
         name: nombre.trim(),
         description: descripcion.trim(),
-        icon: icono,
+        icon: icono?.trim() ? icono : null,
         color: color || DEFAULT_COMMUNITY_COLOR_TOKEN,
       })
 
@@ -107,7 +106,6 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
             variant: "destructive"
           })
         }
-        setLoading(false)
         return
       }
 
@@ -125,7 +123,6 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
       setDescripcion('')
       setIcono('🎵')
       setColor(DEFAULT_COMMUNITY_COLOR_TOKEN)
-      setLoading(false)
       onClose()
       window.dispatchEvent(new CustomEvent('comunidadCreated'))
       router.push(`/comunidad/${comunidadId}`)
@@ -136,6 +133,7 @@ export default function CreateComunidadModal({ isOpen, onClose }: CreateComunida
         description: "No se pudo crear la comunidad",
         variant: "destructive"
       })
+    } finally {
       setLoading(false)
     }
   }

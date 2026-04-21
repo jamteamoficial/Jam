@@ -24,6 +24,8 @@ import {
 import { listCommunityMemberIds } from '@/src/lib/services/communities'
 import JamLoadingPlaceholder from '@/app/components/JamLoadingPlaceholder'
 
+const FEED_REQUEST_TIMEOUT_MS = 8_000
+
 type AppFeedPost = FeedDisplayPost & {
   user_id?: string
   created_at?: string
@@ -34,6 +36,8 @@ export default function Home() {
   const { toast } = useToast()
   const [mounted, setMounted] = useState(false)
   const [feedLoading, setFeedLoading] = useState(true)
+  const [feedTimedOut, setFeedTimedOut] = useState(false)
+  const [feedErrorMessage, setFeedErrorMessage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'chats' | 'feed' | 'comunidad'>('feed')
   const [activeFeed, setActiveFeed] = useState<'general' | 'descubrir' | 'conectar' | 'aprender'>('general')
   const [currentPosts, setCurrentPosts] = useState<AppFeedPost[]>([])
@@ -46,6 +50,21 @@ export default function Home() {
   const [desktopSideView, setDesktopSideView] = useState<'feed' | 'mensajes' | 'comunidades' | 'jams'>('feed')
   const [selectedCommunity, setSelectedCommunity] = useState<{ id: string; nombre: string } | null>(null)
   const [matchedProfiles, setMatchedProfiles] = useState<ProfileSearchRow[]>([])
+
+  const withTimeout = useCallback(async <T,>(promise: Promise<T>, label: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`${label} tardó más de 8 segundos.`))
+      }, FEED_REQUEST_TIMEOUT_MS)
+    })
+
+    try {
+      return await Promise.race([promise, timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -155,13 +174,15 @@ export default function Home() {
 
   const loadCurrentFeed = useCallback(async () => {
     setFeedLoading(true)
+    setFeedTimedOut(false)
+    setFeedErrorMessage(null)
     try {
       const supabase = createClient()
 
       if (activeFeed === 'general' && selectedCommunity?.id && user?.id) {
-        const { data: memberIds, error: membersError } = await listCommunityMemberIds(
-          supabase,
-          selectedCommunity.id
+        const { data: memberIds, error: membersError } = await withTimeout(
+          listCommunityMemberIds(supabase, selectedCommunity.id),
+          'La carga de miembros de la comunidad'
         )
         if (membersError) {
           console.error('[Home] Error cargando miembros de comunidad', membersError)
@@ -172,10 +193,13 @@ export default function Home() {
           setCurrentPosts([])
           return
         }
-        const { data, error } = await getFeedByUserIds(supabase, {
-          userIds: memberIds ?? [],
-          limit: 50,
-        })
+        const { data, error } = await withTimeout(
+          getFeedByUserIds(supabase, {
+            userIds: memberIds ?? [],
+            limit: 50,
+          }),
+          'La carga del feed de comunidad'
+        )
         if (error) {
           console.error('[Home] Error cargando feed por comunidad', error)
           toast({
@@ -192,7 +216,10 @@ export default function Home() {
         return
       }
 
-      const { data, error } = await getFeed(supabase, { limit: 50 })
+      const { data, error } = await withTimeout(
+        getFeed(supabase, { limit: 50 }),
+        'La carga del feed general'
+      )
       if (error) {
         console.error('[Home] Error cargando posts', error)
         toast({
@@ -209,6 +236,7 @@ export default function Home() {
       setCurrentPosts(mapped)
     } catch (e) {
       console.error('[Home] loadCurrentFeed', e)
+      setFeedErrorMessage(e instanceof Error ? e.message : 'No se pudo cargar el feed.')
       toast({
         title: 'Error al cargar publicaciones',
         description: e instanceof Error ? e.message : 'Intenta de nuevo en un momento.',
@@ -218,7 +246,18 @@ export default function Home() {
       setFeedLoading(false)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `toast` es estable; incluirlo recrea el callback cada render.
-  }, [activeFeed, selectedCommunity?.id, user?.id])
+  }, [activeFeed, selectedCommunity?.id, user?.id, withTimeout])
+
+  useEffect(() => {
+    if (!feedLoading) return
+    const timer = window.setTimeout(() => {
+      setFeedTimedOut(true)
+      setFeedErrorMessage('La carga tardó demasiado. Revisa tu conexión o intenta de nuevo.')
+      setFeedLoading(false)
+    }, FEED_REQUEST_TIMEOUT_MS)
+
+    return () => window.clearTimeout(timer)
+  }, [feedLoading])
 
   useEffect(() => {
     if (!mounted) return
@@ -307,6 +346,10 @@ export default function Home() {
       description: 'Tu publicación fue eliminada del feed.',
     })
     await loadCurrentFeed()
+  }
+
+  const handleRetryFeed = () => {
+    void loadCurrentFeed()
   }
 
   useEffect(() => {
@@ -512,6 +555,21 @@ export default function Home() {
                 )}
                 {feedLoading ? (
                   <JamLoadingPlaceholder className="min-h-[24rem]" />
+                ) : feedTimedOut ? (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-6 text-center">
+                    <p className="text-sm font-semibold text-amber-900">La carga está tardando demasiado</p>
+                    <p className="mt-1 text-xs text-amber-800">
+                      {feedErrorMessage ?? 'Hubo un problema temporal al cargar el feed en este entorno.'}
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={handleRetryFeed}
+                      className="mt-4 text-white hover:opacity-90"
+                      style={{ backgroundColor: 'var(--rolex)' }}
+                    >
+                      Reintentar
+                    </Button>
+                  </div>
                 ) : filteredPosts.length === 0 ? (
                   <div className="flex h-96 flex-col items-center justify-center text-center">
                     <Music className="mb-4 h-20 w-20 text-rolex/50" />
@@ -632,6 +690,21 @@ export default function Home() {
               )}
               {feedLoading ? (
                 <JamLoadingPlaceholder className="min-h-[20rem]" />
+              ) : feedTimedOut ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-center">
+                  <p className="text-sm font-semibold text-amber-900">La carga está tardando demasiado</p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    {feedErrorMessage ?? 'No pudimos cargar el feed a tiempo.'}
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleRetryFeed}
+                    className="mt-3 text-white hover:opacity-90"
+                    style={{ backgroundColor: 'var(--rolex)' }}
+                  >
+                    Reintentar
+                  </Button>
+                </div>
               ) : filteredPosts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Music className="mb-4 h-16 w-16 text-rolex/50" />

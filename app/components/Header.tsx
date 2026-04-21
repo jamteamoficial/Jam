@@ -11,6 +11,8 @@ import NotificationsBell from '@/app/components/NotificationsBell'
 import { createClient } from '@/src/lib/supabase/client'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
+const HEADER_AUTH_TIMEOUT_MS = 8_000
+
 interface HeaderProps {
   onProfileClick?: () => void
   onLoginClick?: () => void
@@ -29,15 +31,38 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
 
   const supabase = useMemo(() => createClient(), [])
 
+  const withTimeout = async <T,>(promise: Promise<T>, label: string): Promise<T> => {
+    let timeoutId: ReturnType<typeof setTimeout> | null = null
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(`${label} tardó más de 8 segundos.`))
+      }, HEADER_AUTH_TIMEOUT_MS)
+    })
+    try {
+      return await Promise.race([promise, timeoutPromise])
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
+  }
+
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
     const init = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setSupabaseUser(user ?? null)
-      setLoading(false)
+      try {
+        const { data: { user } } = await withTimeout(
+          supabase.auth.getUser(),
+          'La carga de sesión del header'
+        )
+        setSupabaseUser(user ?? null)
+      } catch (error) {
+        console.error('[Header] getUser error', error)
+        setSupabaseUser(null)
+      } finally {
+        setLoading(false)
+      }
     }
     void init()
 
