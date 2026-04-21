@@ -35,6 +35,29 @@ export type PostCommentRow = {
   } | null
 }
 
+export type JamStatus = 'pending' | 'accepted' | 'rejected'
+
+export type JamRow = {
+  id: string
+  sender_id: string
+  receiver_id: string
+  post_id: string | null
+  status: JamStatus
+  created_at: string
+  sender?: {
+    id: string
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+  } | null
+  receiver?: {
+    id: string
+    username: string | null
+    full_name: string | null
+    avatar_url: string | null
+  } | null
+}
+
 /**
  * Feed: posts + autor + conteo de likes en una sola petición.
  * Relaciones explícitas para evitar PGRST201 (varias FK entre `posts` y `profiles` / `post_likes`).
@@ -314,6 +337,262 @@ export async function sendMessage(
     })
     .select()
     .single()
+}
+
+export async function sendJamRequest(
+  supabase: SupabaseClient,
+  input: { postId: string; receiverId?: string | null }
+): Promise<{ data: JamRow | null; error: Error | null }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: null, error: new Error('Debes iniciar sesión para mandar un JAM') }
+  }
+
+  if (!input.postId) {
+    return { data: null, error: new Error('Post inválido para enviar JAM') }
+  }
+
+  const { count: pendingCount, error: pendingErr } = await supabase
+    .from('jams')
+    .select('id', { count: 'exact', head: true })
+    .eq('sender_id', user.id)
+    .eq('status', 'pending')
+
+  if (pendingErr) {
+    return { data: null, error: new Error(pendingErr.message) }
+  }
+
+  if ((pendingCount ?? 0) >= 10) {
+    return {
+      data: null,
+      error: new Error(
+        'Límite de 10 solicitudes pendientes alcanzado. Espera a que alguien responda para mandar más.'
+      ),
+    }
+  }
+
+  let receiverId = input.receiverId ?? null
+  if (!receiverId) {
+    const { data: postRow, error: postErr } = await supabase
+      .from('posts')
+      .select('user_id')
+      .eq('id', input.postId)
+      .maybeSingle()
+    if (postErr || !postRow?.user_id) {
+      return { data: null, error: new Error(postErr?.message || 'No se pudo identificar al receptor del JAM') }
+    }
+    receiverId = String(postRow.user_id)
+  }
+
+  if (receiverId === user.id) {
+    return { data: null, error: new Error('No puedes enviarte un JAM a ti mismo') }
+  }
+
+  const { data, error } = await supabase
+    .from('jams')
+    .upsert(
+      {
+        sender_id: user.id,
+        receiver_id: receiverId,
+        post_id: input.postId,
+        status: 'pending',
+      },
+      { onConflict: 'sender_id,post_id' }
+    )
+    .select(
+      `
+      id,
+      sender_id,
+      receiver_id,
+      post_id,
+      status,
+      created_at
+      `
+    )
+    .single()
+
+  return { data: (data as JamRow | null) ?? null, error: error ? new Error(error.message) : null }
+}
+
+export async function countMyPendingJams(
+  supabase: SupabaseClient
+): Promise<{ count: number; error: Error | null }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { count: 0, error: null }
+  }
+
+  const { count, error } = await supabase
+    .from('jams')
+    .select('id', { count: 'exact', head: true })
+    .eq('sender_id', user.id)
+    .eq('status', 'pending')
+
+  return { count: count ?? 0, error: error ? new Error(error.message) : null }
+}
+
+export async function getMyJamStatusesByPostIds(
+  supabase: SupabaseClient,
+  postIds: string[]
+): Promise<{ data: Record<string, JamStatus>; error: Error | null; pendingCount: number }> {
+  const uniqueIds = [...new Set(postIds.filter(Boolean))]
+  if (uniqueIds.length === 0) return { data: {}, error: null, pendingCount: 0 }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: {}, error: null, pendingCount: 0 }
+  }
+
+  const { data, error } = await supabase
+    .from('jams')
+    .select('post_id, status')
+    .eq('sender_id', user.id)
+    .in('post_id', uniqueIds)
+
+  if (error) return { data: {}, error: new Error(error.message), pendingCount: 0 }
+
+  const map: Record<string, JamStatus> = {}
+  let pendingCount = 0
+  for (const row of data ?? []) {
+    const postId = String(row.post_id || '')
+    const status = row.status as JamStatus
+    if (!postId) continue
+    map[postId] = status
+    if (status === 'pending') pendingCount += 1
+  }
+  return { data: map, error: null, pendingCount }
+}
+
+export async function hasAcceptedJamBetweenUsers(
+  supabase: SupabaseClient,
+  input: { otherUserId: string }
+): Promise<{ data: boolean; error: Error | null }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: false, error: null }
+  }
+
+  const { data, error } = await supabase
+    .from('jams')
+    .select('id')
+    .eq('status', 'accepted')
+    .or(
+      `and(sender_id.eq.${user.id},receiver_id.eq.${input.otherUserId}),and(sender_id.eq.${input.otherUserId},receiver_id.eq.${user.id})`
+    )
+    .maybeSingle()
+
+  return { data: Boolean(data), error: error ? new Error(error.message) : null }
+}
+
+export async function listReceivedJams(
+  supabase: SupabaseClient,
+  options?: { status?: JamStatus; limit?: number }
+): Promise<{ data: JamRow[]; error: Error | null }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: [], error: new Error('Debes iniciar sesión') }
+  }
+
+  const limit = options?.limit ?? 100
+  const status = options?.status
+
+  let query = supabase
+    .from('jams')
+    .select(
+      `
+      id,
+      sender_id,
+      receiver_id,
+      post_id,
+      status,
+      created_at,
+      sender:profiles!sender_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      receiver:profiles!receiver_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+      `
+    )
+    .eq('receiver_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (status) query = query.eq('status', status)
+
+  const { data, error } = await query
+  return { data: (data as JamRow[] | null) ?? [], error: error ? new Error(error.message) : null }
+}
+
+export async function updateJamStatus(
+  supabase: SupabaseClient,
+  input: { jamId: string; status: Extract<JamStatus, 'accepted' | 'rejected'> }
+): Promise<{ data: JamRow | null; error: Error | null }> {
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return { data: null, error: new Error('Debes iniciar sesión') }
+  }
+
+  const { data, error } = await supabase
+    .from('jams')
+    .update({ status: input.status })
+    .eq('id', input.jamId)
+    .eq('receiver_id', user.id)
+    .select(
+      `
+      id,
+      sender_id,
+      receiver_id,
+      post_id,
+      status,
+      created_at,
+      sender:profiles!sender_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      ),
+      receiver:profiles!receiver_id (
+        id,
+        username,
+        full_name,
+        avatar_url
+      )
+      `
+    )
+    .single()
+
+  return { data: (data as JamRow | null) ?? null, error: error ? new Error(error.message) : null }
 }
 
 export async function listDirectMessagesThread(

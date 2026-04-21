@@ -7,14 +7,19 @@ import PostActions from '@/app/components/PostActions'
 import LazyVideo from '@/app/components/LazyVideo'
 import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
 import { hasPlayableVideoUrl } from '@/src/lib/feed/hasPlayableVideoUrl'
+import type { JamStatus } from '@/src/lib/services/jam-social'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 
 interface FeedVideoCardProps {
   post: FeedDisplayPost
-  onJam: (postId: string, usuario: string) => void
+  onJam: (postId: string, usuario: string, receiverId: string) => void
   canManage?: boolean
   onEditPost?: (post: FeedDisplayPost) => void
   onDeletePost?: (post: FeedDisplayPost) => void
+  jamStatus?: JamStatus | null
+  jamLoading?: boolean
+  disableJam?: boolean
+  jamLimitReached?: boolean
 }
 
 export default function FeedVideoCard({
@@ -23,6 +28,10 @@ export default function FeedVideoCard({
   canManage = false,
   onEditPost,
   onDeletePost,
+  jamStatus = null,
+  jamLoading = false,
+  disableJam = false,
+  jamLimitReached = false,
 }: FeedVideoCardProps) {
   const videoUrl = post.video_url
   const thumb = post.thumbnail_url?.trim() ? post.thumbnail_url : undefined
@@ -31,6 +40,8 @@ export default function FeedVideoCard({
   const handle = getHandle(post.username || post.usuario)
   const avatarText = getInitials(displayName)
   const profileTarget = post.profile_id || post.user_id || post.usuario
+  const receiverId = post.user_id ?? post.profile_id ?? ''
+  const jamSent = Boolean(jamStatus)
 
   return (
     <article className="overflow-hidden rounded-2xl border-2 border-rolex/20 bg-white shadow-sm transition-all hover:border-rolex/40 hover:shadow-lg">
@@ -126,12 +137,19 @@ export default function FeedVideoCard({
         />
         <Button
           type="button"
-          onClick={() => onJam(post.id, post.usuario)}
+          onClick={() => onJam(post.id, post.usuario, receiverId)}
+          disabled={jamLoading || jamSent || disableJam || !receiverId}
           className="w-full rounded-xl py-3 font-bold text-white hover:opacity-90"
-          style={{ backgroundColor: 'var(--rolex)' }}
+          style={{ backgroundColor: jamLimitReached && !jamSent ? '#9ca3af' : 'var(--rolex)' }}
         >
           <Music className="mr-2 h-4 w-4" />
-          JAM
+          {jamLoading
+            ? 'Enviando JAM…'
+            : jamSent
+              ? 'JAM Enviado'
+              : jamLimitReached
+                ? 'Límite alcanzado'
+                : 'Mandar JAM'}
         </Button>
       </div>
     </article>

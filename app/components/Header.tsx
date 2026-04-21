@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import GoogleLogin from '../../components/GoogleLogin'
 import NotificationsBell from '@/app/components/NotificationsBell'
 import { createClient } from '@/src/lib/supabase/client'
+import { countMyPendingJams } from '@/src/lib/services/jam-social'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
 const HEADER_AUTH_TIMEOUT_MS = 8_000
@@ -27,6 +28,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const [headerQuery, setHeaderQuery] = useState('')
+  const [pendingJams, setPendingJams] = useState(0)
   const headerSearchRef = useRef<HTMLInputElement>(null)
 
   const supabase = useMemo(() => createClient(), [])
@@ -76,6 +78,48 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
       subscription.unsubscribe()
     }
   }, [supabase])
+
+  useEffect(() => {
+    if (!supabaseUser?.id) {
+      setPendingJams(0)
+      return
+    }
+
+    let cancelled = false
+    ;(async () => {
+      const { count, error } = await countMyPendingJams(supabase)
+      if (cancelled) return
+      if (error) {
+        console.error('[Header] countMyPendingJams', error)
+        return
+      }
+      setPendingJams(count)
+    })()
+
+    const refresh = () => {
+      void (async () => {
+        const { count } = await countMyPendingJams(supabase)
+        if (!cancelled) setPendingJams(count)
+      })()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh()
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('showJamAnimation', refresh)
+      window.addEventListener('focus', refresh)
+      document.addEventListener('visibilitychange', onVisibility)
+    }
+
+    return () => {
+      cancelled = true
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('showJamAnimation', refresh)
+        window.removeEventListener('focus', refresh)
+        document.removeEventListener('visibilitychange', onVisibility)
+      }
+    }
+  }, [supabaseUser?.id, supabase])
 
   const isAuthenticated = !!supabaseUser
   const avatarUrl = supabaseUser?.user_metadata?.avatar_url as string | undefined
@@ -181,6 +225,9 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
               <>
                 {isAuthenticated ? (
                   <>
+                    <span className="hidden rounded-full border border-rolex/30 bg-rolex/10 px-2.5 py-1 text-xs font-semibold text-rolex lg:inline-flex">
+                      JAMs pendientes: {pendingJams}/10
+                    </span>
                     <button
                       type="button"
                       onClick={() => router.push('/perfil')}

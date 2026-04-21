@@ -27,7 +27,19 @@ import { createClient } from '@/src/lib/supabase/client'
 import { getDisplayName, getHandle, getInitials } from '@/src/lib/userDisplay'
 import { mapFeedPostRowToDisplayPost } from '@/src/lib/mapFeedPost'
 import type { FeedDisplayPost } from '@/src/lib/feedDisplayPost'
-import { countFollowers, countFollowing, POSTS_FEED_SELECT, toggleFollow } from '@/src/lib/services/jam-social'
+import {
+  countFollowers,
+  countFollowing,
+  getMyJamStatusesByPostIds,
+  hasAcceptedJamBetweenUsers,
+  listReceivedJams,
+  POSTS_FEED_SELECT,
+  sendJamRequest,
+  toggleFollow,
+  type JamRow,
+  type JamStatus,
+  updateJamStatus,
+} from '@/src/lib/services/jam-social'
 import { createNotification } from '@/src/lib/services/notifications'
 import JamLoadingPlaceholder from '@/app/components/JamLoadingPlaceholder'
 
@@ -101,6 +113,13 @@ export default function UsuarioProfilePage() {
 
   const [following, setFollowing] = useState(false)
   const [followLoading, setFollowLoading] = useState(false)
+  const [jamStatusByPost, setJamStatusByPost] = useState<Record<string, JamStatus>>({})
+  const [pendingJamCount, setPendingJamCount] = useState(0)
+  const [jammingPostId, setJammingPostId] = useState<string | null>(null)
+  const [canMessage, setCanMessage] = useState(false)
+  const [jamRequests, setJamRequests] = useState<JamRow[]>([])
+  const [requestsLoading, setRequestsLoading] = useState(false)
+  const [requestActionId, setRequestActionId] = useState<string | null>(null)
   const [editOpen, setEditOpen] = useState(false)
   const [savingProfile, setSavingProfile] = useState(false)
   const [editForm, setEditForm] = useState({ fullName: '', username: '', bio: '', instrumentos: '' })
@@ -208,6 +227,77 @@ export default function UsuarioProfilePage() {
     }
   }, [profile?.id])
 
+  useEffect(() => {
+    if (!user?.id || !profile?.id || isOwnProfile) {
+      setCanMessage(false)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const { data: accepted } = await hasAcceptedJamBetweenUsers(supabase, { otherUserId: profile.id })
+      if (cancelled) return
+      setCanMessage(Boolean(accepted))
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, profile?.id, isOwnProfile])
+
+  useEffect(() => {
+    if (!user?.id) {
+      setJamStatusByPost({})
+      setPendingJamCount(0)
+      return
+    }
+    const postIds = posts.map((p) => p.id).filter(Boolean)
+    if (postIds.length === 0) {
+      setJamStatusByPost({})
+      setPendingJamCount(0)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const { data, pendingCount, error } = await getMyJamStatusesByPostIds(supabase, postIds)
+      if (cancelled) return
+      if (error) {
+        console.error('[UsuarioProfile] getMyJamStatusesByPostIds', error)
+        return
+      }
+      setJamStatusByPost(data)
+      setPendingJamCount(pendingCount)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, posts])
+
+  useEffect(() => {
+    if (!user?.id || !isOwnProfile) {
+      setJamRequests([])
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      setRequestsLoading(true)
+      const supabase = createClient()
+      const { data, error } = await listReceivedJams(supabase, { limit: 100 })
+      if (cancelled) return
+      if (error) {
+        console.error('[UsuarioProfile] listReceivedJams', error)
+        setJamRequests([])
+        setRequestsLoading(false)
+        return
+      }
+      setJamRequests(data)
+      setRequestsLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, isOwnProfile])
+
   const handleFollow = async () => {
     if (followLoading) return
     if (!user) {
@@ -267,19 +357,75 @@ export default function UsuarioProfilePage() {
     setFollowLoading(false)
   }
 
-  const handleProfileJam = () => {
-    if (!user) {
+  const handleSendJamToProfile = async (postId: string, receiverId: string) => {
+    if (!receiverId || !postId || !user?.id || isOwnProfile) return
+    if (jammingPostId || jamStatusByPost[postId]) return
+    if (pendingJamCount >= 10) {
       toast({
-        title: 'Inicia sesión',
-        description: 'Necesitas iniciar sesión para enviar un JAM',
+        title: 'Límite alcanzado',
+        description:
+          'Límite de 10 solicitudes pendientes alcanzado. Espera a que alguien responda para mandar más.',
         variant: 'destructive',
       })
       return
     }
+    const supabase = createClient()
+    setJammingPostId(postId)
+    setJamStatusByPost((prev) => ({ ...prev, [postId]: 'pending' }))
+    setPendingJamCount((n) => n + 1)
+    const { data, error } = await sendJamRequest(supabase, { postId, receiverId })
+    setJammingPostId(null)
+
+    if (error) {
+      setJamStatusByPost((prev) => {
+        const next = { ...prev }
+        delete next[postId]
+        return next
+      })
+      setPendingJamCount((n) => Math.max(0, n - 1))
+      toast({
+        title: 'No se pudo enviar el JAM',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
     window.dispatchEvent(new CustomEvent('showJamAnimation'))
+    setJamStatusByPost((prev) => ({ ...prev, [postId]: data?.status ?? 'pending' }))
     toast({
-      title: '¡JAM enviado!',
-      description: `Tu solicitud fue enviada a ${profile?.nombreArtistico ?? 'este músico'}`,
+      title: 'JAM enviado',
+      description: `Tu solicitud fue enviada a ${profile.nombreArtistico}.`,
+    })
+  }
+
+  const handleRespondJam = async (jamId: string, nextStatus: 'accepted' | 'rejected') => {
+    if (!isOwnProfile || requestActionId) return
+    const prev = jamRequests
+    setRequestActionId(jamId)
+    setJamRequests((items) =>
+      items.map((j) => (j.id === jamId ? { ...j, status: nextStatus } : j))
+    )
+    const supabase = createClient()
+    const { data, error } = await updateJamStatus(supabase, { jamId, status: nextStatus })
+    setRequestActionId(null)
+
+    if (error) {
+      setJamRequests(prev)
+      toast({
+        title: 'No se pudo actualizar la solicitud',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setJamRequests((items) =>
+      items.map((j) => (j.id === jamId ? ({ ...j, status: data?.status ?? nextStatus } as JamRow) : j))
+    )
+    toast({
+      title: nextStatus === 'accepted' ? 'JAM aceptado' : 'JAM rechazado',
+      description: 'Estado actualizado al instante.',
     })
   }
 
@@ -299,9 +445,9 @@ export default function UsuarioProfilePage() {
   }
 
   const handleJam = (postId: string, usuario: string) => {
-    void postId
     void usuario
-    handleProfileJam()
+    if (!profile?.id) return
+    void handleSendJamToProfile(postId, profile.id)
   }
 
   const openEditModal = () => {
@@ -524,15 +670,17 @@ export default function UsuarioProfilePage() {
                     >
                       {followLoading ? 'Guardando…' : following ? 'Siguiendo' : 'Seguir'}
                     </Button>
-                    <Button
-                      onClick={handleOpenMessage}
-                      variant="outline"
-                      className="h-11 flex-1 border-2 font-semibold hover:bg-rolex/5"
-                      style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Mensaje
-                    </Button>
+                    {canMessage ? (
+                      <Button
+                        onClick={handleOpenMessage}
+                        variant="outline"
+                        className="h-11 flex-1 border-2 font-semibold hover:bg-rolex/5"
+                        style={{ borderColor: 'var(--rolex)', color: 'var(--rolex)' }}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        Mensaje
+                      </Button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="mb-4">
@@ -615,6 +763,66 @@ export default function UsuarioProfilePage() {
             </div>
           </div>
 
+          {isOwnProfile ? (
+            <div className="mb-6 rounded-2xl border-2 border-rolex/25 bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-xl font-bold text-gray-900">Solicitudes de JAM</h2>
+              {requestsLoading ? (
+                <JamLoadingPlaceholder className="min-h-[8rem] py-6" />
+              ) : jamRequests.length === 0 ? (
+                <p className="text-sm text-gray-600">No tienes solicitudes por ahora.</p>
+              ) : (
+                <div className="space-y-3">
+                  {jamRequests.map((jam) => {
+                    const senderName = getDisplayName(
+                      jam.sender?.full_name ?? null,
+                      jam.sender?.username ?? jam.sender_id
+                    )
+                    const senderTarget = jam.sender?.username || jam.sender_id
+                    const pending = jam.status === 'pending'
+                    return (
+                      <div
+                        key={jam.id}
+                        className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 md:flex-row md:items-center md:justify-between"
+                      >
+                        <div>
+                          <Link href={`/usuario/${encodeURIComponent(senderTarget)}`} className="font-semibold text-rolex hover:underline">
+                            {senderName}
+                          </Link>
+                          <p className="text-xs text-gray-500">
+                            Estado:{' '}
+                            <span className="font-medium uppercase">{jam.status}</span>
+                          </p>
+                        </div>
+                        {pending ? (
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => void handleRespondJam(jam.id, 'accepted')}
+                              disabled={requestActionId === jam.id}
+                              className="text-white hover:opacity-90"
+                              style={{ backgroundColor: 'var(--rolex)' }}
+                            >
+                              Aceptar
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => void handleRespondJam(jam.id, 'rejected')}
+                              disabled={requestActionId === jam.id}
+                              className="border-red-300 text-red-600 hover:bg-red-50"
+                            >
+                              Rechazar
+                            </Button>
+                          </div>
+                        ) : null}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          ) : null}
+
           <div className="mb-6">
             <h2 className="mb-4 flex items-center gap-2 text-2xl font-bold text-gray-900">
               <Music className="h-6 w-6 text-rolex" />
@@ -674,11 +882,26 @@ export default function UsuarioProfilePage() {
                         />
                         <Button
                           onClick={() => handleJam(post.id, post.usuario)}
-                          className="w-full font-bold text-white hover:opacity-90"
-                          style={{ backgroundColor: 'var(--rolex)' }}
+                          disabled={
+                            Boolean(jammingPostId === post.id || jamStatusByPost[post.id]) ||
+                            (pendingJamCount >= 10 && !jamStatusByPost[post.id])
+                          }
+                          className="w-full font-bold text-white hover:opacity-90 disabled:opacity-70"
+                          style={{
+                            backgroundColor:
+                              pendingJamCount >= 10 && !jamStatusByPost[post.id]
+                                ? '#9ca3af'
+                                : 'var(--rolex)',
+                          }}
                         >
                           <Music className="mr-2 h-4 w-4" />
-                          JAM
+                          {jammingPostId === post.id
+                            ? 'Enviando…'
+                            : jamStatusByPost[post.id]
+                              ? 'JAM Enviado'
+                              : pendingJamCount >= 10
+                                ? 'Límite alcanzado'
+                                : 'Mandar JAM'}
                         </Button>
                       </div>
                     </div>

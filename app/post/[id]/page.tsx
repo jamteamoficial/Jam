@@ -13,7 +13,10 @@ import { createClient } from '@/src/lib/supabase/client'
 import {
   createComment,
   getCommentsByPost,
+  getMyJamStatusesByPostIds,
   POSTS_FEED_SELECT,
+  sendJamRequest,
+  type JamStatus,
   type PostCommentRow,
 } from '@/src/lib/services/jam-social'
 import { parsePostLikeCountFromRow } from '@/src/lib/feed/postLikeCount'
@@ -63,6 +66,9 @@ export default function PostDetailPage() {
   const [post, setPost] = useState<PostRow | null>(null)
   const [comments, setComments] = useState<PostCommentRow[]>([])
   const [commentText, setCommentText] = useState('')
+  const [jamStatus, setJamStatus] = useState<JamStatus | null>(null)
+  const [jamLoading, setJamLoading] = useState(false)
+  const [pendingJamCount, setPendingJamCount] = useState(0)
 
   const author = useMemo(() => {
     if (!post?.profiles) return null
@@ -113,6 +119,64 @@ export default function PostDetailPage() {
       cancelled = true
     }
   }, [postId])
+
+  useEffect(() => {
+    if (!user?.id || !post?.user_id || user.id === post.user_id) {
+      setJamStatus(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const supabase = createClient()
+      const { data, pendingCount } = await getMyJamStatusesByPostIds(supabase, [post.id])
+      if (cancelled) return
+      setJamStatus(data[post.id] ?? null)
+      setPendingJamCount(pendingCount)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id, post?.user_id])
+
+  const handleJam = async () => {
+    if (!user?.id) {
+      router.push('/login')
+      return
+    }
+    if (!post?.user_id || user.id === post.user_id || jamStatus || jamLoading) return
+    if (pendingJamCount >= 10) {
+      toast({
+        title: 'Límite alcanzado',
+        description:
+          'Límite de 10 solicitudes pendientes alcanzado. Espera a que alguien responda para mandar más.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setJamLoading(true)
+    setJamStatus('pending')
+    setPendingJamCount((n) => n + 1)
+    const supabase = createClient()
+    const { data, error } = await sendJamRequest(supabase, { postId: post.id, receiverId: post.user_id })
+    setJamLoading(false)
+    if (error) {
+      setJamStatus(null)
+      setPendingJamCount((n) => Math.max(0, n - 1))
+      toast({
+        title: 'No se pudo enviar el JAM',
+        description: error.message,
+        variant: 'destructive',
+      })
+      return
+    }
+    window.dispatchEvent(new CustomEvent('showJamAnimation'))
+    setJamStatus(data?.status ?? 'pending')
+    toast({
+      title: 'JAM enviado',
+      description: `Tu solicitud fue enviada a ${author?.name ?? 'este músico'}.`,
+    })
+  }
 
   const submitComment = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -203,6 +267,26 @@ export default function PostDetailPage() {
                     initialLikeCount={post.likeCount}
                   />
                 </div>
+                {user?.id && user.id !== post.user_id ? (
+                  <Button
+                    type="button"
+                    onClick={() => void handleJam()}
+                    disabled={jamLoading || Boolean(jamStatus) || pendingJamCount >= 10}
+                    className="mt-3 text-white hover:opacity-90 disabled:opacity-70"
+                    style={{
+                      backgroundColor:
+                        pendingJamCount >= 10 && !jamStatus ? '#9ca3af' : 'var(--rolex)',
+                    }}
+                  >
+                    {jamLoading
+                      ? 'Enviando JAM…'
+                      : jamStatus
+                        ? 'JAM Enviado'
+                        : pendingJamCount >= 10
+                          ? 'Límite alcanzado'
+                          : 'Mandar JAM'}
+                  </Button>
+                ) : null}
                 {post.description ? <p className="mt-4 whitespace-pre-wrap text-gray-800">{post.description}</p> : null}
               </div>
             </div>
