@@ -6,7 +6,7 @@ import type { User as SupabaseAuthUser } from '@supabase/supabase-js'
 import { createClient } from '@/src/lib/supabase/client'
 import { ensurePublicProfileFromAuth } from '@/src/lib/supabase/ensurePublicProfile'
 
-const AUTH_REQUEST_TIMEOUT_MS = 8_000
+const AUTH_REQUEST_TIMEOUT_MS = 5_000
 
 export interface ProfileData {
   nombreCompleto: string
@@ -56,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
-        reject(new Error(`${label} tardó más de 8 segundos.`))
+        reject(new Error(`${label} tardó más de 5 segundos.`))
       }, AUTH_REQUEST_TIMEOUT_MS)
     })
     try {

@@ -27,7 +27,7 @@ import {
 import { listCommunityMemberIds } from '@/src/lib/services/communities'
 import JamLoadingPlaceholder from '@/app/components/JamLoadingPlaceholder'
 
-const FEED_REQUEST_TIMEOUT_MS = 8_000
+const FEED_REQUEST_TIMEOUT_MS = 5_000
 
 type AppFeedPost = FeedDisplayPost & {
   user_id?: string
@@ -61,7 +61,7 @@ export default function Home() {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
-        reject(new Error(`${label} tardó más de 8 segundos.`))
+        reject(new Error(`${label} tardó más de 5 segundos.`))
       }, FEED_REQUEST_TIMEOUT_MS)
     })
 

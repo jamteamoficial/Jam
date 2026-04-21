@@ -12,7 +12,7 @@ import { createClient } from '@/src/lib/supabase/client'
 import { countMyPendingJams } from '@/src/lib/services/jam-social'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
-const HEADER_AUTH_TIMEOUT_MS = 8_000
+const HEADER_AUTH_TIMEOUT_MS = 5_000
 
 interface HeaderProps {
   onProfileClick?: () => void
@@ -37,7 +37,7 @@ export default function Header({ onProfileClick, onLoginClick }: HeaderProps) {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     const timeoutPromise = new Promise<never>((_, reject) => {
       timeoutId = setTimeout(() => {
-        reject(new Error(`${label} tardó más de 8 segundos.`))
+        reject(new Error(`${label} tardó más de 5 segundos.`))
       }, HEADER_AUTH_TIMEOUT_MS)
     })
     try {
