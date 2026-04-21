@@ -219,6 +219,8 @@ export default function Home() {
           FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })
         >).map((row) => mapFeedPostRowToDisplayPost(row, 'general'))
         setCurrentPosts(mapped)
+        setFeedTimedOut(false)
+        setFeedErrorMessage(null)
         return
       }
 
@@ -240,6 +242,8 @@ export default function Home() {
         FeedPostRow | (FeedPostRow & { profiles: FeedPostRow['profiles'][] })
       >).map((row) => mapFeedPostRowToDisplayPost(row, activeFeed))
       setCurrentPosts(mapped)
+      setFeedTimedOut(false)
+      setFeedErrorMessage(null)
     } catch (e) {
       console.error('[Home] loadCurrentFeed', e)
       setFeedErrorMessage(e instanceof Error ? e.message : 'No se pudo cargar el feed.')
