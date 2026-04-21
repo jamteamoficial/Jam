@@ -392,17 +392,40 @@ export async function sendJamRequest(
     return { data: null, error: new Error('No puedes enviarte un JAM a ti mismo') }
   }
 
+  // Evitamos `upsert` porque en algunos esquemas RLS fuerza ruta UPDATE y falla con
+  // "violates row-level security policy (USING expression)".
+  const { data: existing, error: existingErr } = await supabase
+    .from('jams')
+    .select(
+      `
+      id,
+      sender_id,
+      receiver_id,
+      post_id,
+      status,
+      created_at
+      `
+    )
+    .eq('sender_id', user.id)
+    .eq('post_id', input.postId)
+    .maybeSingle()
+
+  if (existingErr) {
+    return { data: null, error: new Error(existingErr.message) }
+  }
+
+  if (existing) {
+    return { data: existing as JamRow, error: null }
+  }
+
   const { data, error } = await supabase
     .from('jams')
-    .upsert(
-      {
-        sender_id: user.id,
-        receiver_id: receiverId,
-        post_id: input.postId,
-        status: 'pending',
-      },
-      { onConflict: 'sender_id,post_id' }
-    )
+    .insert({
+      sender_id: user.id,
+      receiver_id: receiverId,
+      post_id: input.postId,
+      status: 'pending',
+    })
     .select(
       `
       id,
@@ -414,6 +437,26 @@ export async function sendJamRequest(
       `
     )
     .single()
+
+  // Si otro cliente insertó justo antes, tratamos como ya enviado.
+  if (error && typeof error.message === 'string' && error.message.toLowerCase().includes('duplicate')) {
+    const { data: duplicated } = await supabase
+      .from('jams')
+      .select(
+        `
+        id,
+        sender_id,
+        receiver_id,
+        post_id,
+        status,
+        created_at
+        `
+      )
+      .eq('sender_id', user.id)
+      .eq('post_id', input.postId)
+      .maybeSingle()
+    return { data: (duplicated as JamRow | null) ?? null, error: null }
+  }
 
   return { data: (data as JamRow | null) ?? null, error: error ? new Error(error.message) : null }
 }
